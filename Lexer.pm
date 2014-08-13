@@ -1,5 +1,8 @@
 package Lexer;
 
+use strict;
+use warnings;
+
 my @reserved_words = qw(if then else elif fi done do case esac while until for in);
 
 sub new {
@@ -11,6 +14,60 @@ sub new {
         inject => undef,
     };
     return bless($self, $class);
+}
+
+sub _get_rest_q_string {
+    my ($self) = @_;
+    my $target = \$self->{current_line};
+
+    my $value = "";
+
+    $$target =~ /\G ([^']*'|.*) /gcx;
+    $value = $1;
+    if ($value !~ /'$/) {
+        $self->{current_line} = $self->{reader}->('token', "'");
+        die "Unexpected end of input" if !defined($self->{current_line});
+        $value .= "\n" . $self->_get_rest_q_string();
+    }
+
+    return $value;
+}
+
+sub _get_rest_qq_string {
+    my ($self) = @_;
+    my $target = \$self->{current_line};
+
+    my $value = "";
+
+    $$target =~ /\G ([^"]*"|.*) /gcx;
+    $value = $1;
+    if ($value !~ /"$/) {
+        # FIXME: handle \", etc.
+        $self->{current_line} = $self->{reader}->('token', '"');
+        die "Unexpected end of input" if !defined($self->{current_line});
+        $value .= "\n" . $self->_get_rest_qq_string();
+    }
+
+    return $value;
+}
+sub _get_word {
+    my ($self) = @_;
+    my $target = \$self->{current_line};
+
+    my $value = "";
+
+    print "target: $$target\n";
+    while ($$target =~ /\G ([^\s<>()|;&]) /gcx) {
+        my $c = $1;
+        $value .= $c;
+        if ($c eq "'") {
+            $value .= $self->_get_rest_q_string();
+        } elsif ($c eq '"') {
+            $value .= $self->_get_rest_qq_string();
+        }
+        print "word: $value\n";
+    }
+    return $value;
 }
 
 sub _get_next_token {
@@ -38,17 +95,17 @@ sub _get_next_token {
         return ('NEWLINE', $1) if $$target =~ /\G (\#.*) /gcx;
         redo                   if $$target =~ /\G \s+    /gcx;
 
-        return ('AND_IF',    $1) if $$target =~ /\G (&&)   /gcxi;
-        return ('OR_IF',     $1) if $$target =~ /\G (\|\|) /gcxi;
-        return ('DSEMI',     $1) if $$target =~ /\G (;;)   /gcxi;
-        return ('DLESS',     $1) if $$target =~ /\G (<<)   /gcxi;
-        return ('DGREAT',    $1) if $$target =~ /\G (>>)   /gcxi;
-        return ('LESSAND',   $1) if $$target =~ /\G (<&)   /gcxi;
-        return ('GREATAND',  $1) if $$target =~ /\G (>&)   /gcxi;
-        return ('LESSGREAT', $1) if $$target =~ /\G (<>)   /gcxi;
-        return ('DLESSDASH', $1) if $$target =~ /\G (<<-)  /gcxi;
-        return ('CLOBBER',   $1) if $$target =~ /\G (>\|)  /gcxi;
-        return ('CLOBBER',   $1) if $$target =~ /\G (>\|)  /gcxi;
+        return ('AND_IF',    $1) if $$target =~ /\G (&&)   /gcx;
+        return ('OR_IF',     $1) if $$target =~ /\G (\|\|) /gcx;
+        return ('DSEMI',     $1) if $$target =~ /\G (;;)   /gcx;
+        return ('DLESS',     $1) if $$target =~ /\G (<<)   /gcx;
+        return ('DGREAT',    $1) if $$target =~ /\G (>>)   /gcx;
+        return ('LESSAND',   $1) if $$target =~ /\G (<&)   /gcx;
+        return ('GREATAND',  $1) if $$target =~ /\G (>&)   /gcx;
+        return ('LESSGREAT', $1) if $$target =~ /\G (<>)   /gcx;
+        return ('DLESSDASH', $1) if $$target =~ /\G (<<-)  /gcx;
+        return ('CLOBBER',   $1) if $$target =~ /\G (>\|)  /gcx;
+        return ('CLOBBER',   $1) if $$target =~ /\G (>\|)  /gcx;
 
         if ($$target =~ /\G (for) /gcx) {
             $self->{prev_token} = 'For';
@@ -60,8 +117,10 @@ sub _get_next_token {
             }
         }
 
-        if ($$target =~ /\G ([A-Za-z0-9\$\"'=]+) /gcx) {
-            my $word = $1;
+        my $word = $self->_get_word();
+        # if ($$target =~ /\G ([A-Za-z0-9\$\"'=]+) /gcx) {
+        if ($word ne "") {
+            # my $word = $1;
             if ($prev_token eq 'For') {
                 return ('NAME', $word);
             }
@@ -69,14 +128,19 @@ sub _get_next_token {
                 $self->{inject} = ['(', $1];
                 return ('NAME', $word);
             }
+
+
+            return ('Lbrace', $word) if $word eq '{';
+            return ('Rbrace', $word) if $word eq '}';
+            return ('Bang',   $word) if $word eq '!';
+
+            return ('ASSIGNMENT_WORD', $word) if ($word =~ /^[A-Za-z0-9]+=/);
+
             return ('WORD', $word);
             return ('UNKNOWN_WORD', $word);
         }
 
         return ($1, $1)       if $$target =~ /\G ([()|;&]) /gcx;
-        return ('Lbrace', $1) if $$target =~ /\G ({)       /gcx;
-        return ('Rbrace', $1) if $$target =~ /\G (})       /gcx;
-        return ('Bang', $1)   if $$target =~ /\G (!)       /gcx;
 
         return ('UNKNOWN', $1) if $$target =~ /\G (.) /gcx;
 
