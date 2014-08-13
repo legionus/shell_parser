@@ -52,6 +52,24 @@ sub _get_rest_qq_string {
     return $value;
 }
 
+sub _get_rest_qx_string {
+    my ($self) = @_;
+    my $target = \$self->{current_line};
+
+    my $value = "";
+
+    $$target =~ /\G ([^`]*`|.*) /gcx;
+    $value = $1;
+    if ($value !~ /`$/) {
+        # FIXME: handle \", etc.
+        $self->{current_line} = $self->{reader}->('token', '`');
+        die "Unexpected end of input" if !defined($self->{current_line});
+        $value .= "\n" . $self->_get_rest_qq_string();
+    }
+
+    return $value;
+}
+
 sub _get_rest_dbb_string
 {
     my ($self) = @_;
@@ -84,6 +102,8 @@ sub _get_word {
             $value .= $self->_get_rest_q_string();
         } elsif ($c eq '"') {
             $value .= $self->_get_rest_qq_string();
+        } elsif ($c eq '`') {
+            $value .= $self->_get_rest_qx_string();
         } elsif ($c eq '$') {
             if ($$target =~ /\G (\(\() /gcx) {
                 $value .= $1 . $self->_get_rest_dbb_string();
@@ -176,7 +196,7 @@ sub _get_next_token {
         }
 
         $self->{downgrade_assignment_word} = 0;
-        return ($1, $1)       if $$target =~ /\G ([()|;&]) /gcx;
+        return ($1, $1)       if $$target =~ /\G ([<>()|;&]) /gcx;
 
         return ('UNKNOWN', $1) if $$target =~ /\G (.) /gcx;
 
