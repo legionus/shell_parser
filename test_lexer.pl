@@ -6,7 +6,7 @@ use warnings;
 
 use Lexer;
 
-open(F, '<', 't/data/op_0001.sh') or die $!;
+open(F, '<', $ARGV[0]) or die $!;
 
 my $lex = Lexer->new(sub {
 	return scalar <F>;

@@ -7,7 +7,7 @@ use warnings;
 use Data::Dumper;
 use ShellParser;
 
-open(my $fh, '<', 't/data/op_0001.sh') or die $!;
+open(my $fh, '<', $ARGV[0]) or die $!;
 my $p = ShellParser->new();
 my $result = $p->parse($fh);
 if (!$result) {
