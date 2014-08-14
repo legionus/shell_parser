@@ -14,4 +14,17 @@ sub new {
     }, $class);
 }
 
+sub print {
+    my ($self, $sep, $depth) = @_;
+    print $sep x $depth . "For(variable=$self->{variable})\n";
+    if ($self->{words}) {
+        print $sep x $depth . $sep . "For::words()\n";
+        foreach my $word (@{$self->{words}}) {
+            print $sep x $depth . $sep . $sep . "$word\n"; # FIXME
+        }
+    }
+    print $sep x $depth . $sep . "For::body()\n";
+    $self->{body}->print($sep, $depth + 2);
+}
+
 1;
