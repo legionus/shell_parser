@@ -1,4 +1,4 @@
-package ShellParser::Token::PipeSeq;
+package ShellParser::Token::PipeLine;
 
 use strict;
 use warnings;

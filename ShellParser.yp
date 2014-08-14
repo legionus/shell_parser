@@ -2,7 +2,7 @@
 use Token::List;
 use Token::FuncDef;
 use Token::SubShell;
-use Token::PipeSeq;
+use Token::PipeLine;
 use Token::Command;
 use Token::Redirection;
 use Token::DoGroup;
@@ -69,7 +69,7 @@ pipeline         :      pipe_sequence
                  | Bang pipe_sequence
                  ;
 pipe_sequence    :                             command
-                 { ShellParser::Token::PipeSeq->new($_[1]) }
+                 { ShellParser::Token::PipeLine->new($_[1]) }
                  | pipe_sequence '|' linebreak command
                  { $_[1]->append($_[4]); $_[1] }
                  ;
