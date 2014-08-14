@@ -7,14 +7,11 @@ use base 'ShellParser::Token';
 
 sub new {
     my ($class, $name, $args, $prefix) = @_;
-    my $obj = {
+    return bless({
         name   => $name,
-        args   => [],
-        prefix => [],
-    };
-    $obj->{args} = $args if $args and @{$args};
-    $obj->{prefix} = $prefix if $prefix and @{$prefix};
-    return bless($obj, $class);
+        args   => $args,
+        prefix => $prefix,
+    }, $class);
 }
 
 1;

@@ -170,9 +170,9 @@ simple_command   : cmd_prefix cmd_word cmd_suffix
                  | cmd_prefix
                  { ShellParser::Token::Command->new(undef, [], $_[1]) }
                  | cmd_name cmd_suffix
-                 { ShellParser::Token::Command->new($_[1], $_[2]) }
+                 { ShellParser::Token::Command->new($_[1], $_[2], []) }
                  | cmd_name
-                 { ShellParser::Token::Command->new($_[1]) }
+                 { ShellParser::Token::Command->new($_[1], [], []) }
                  ;
 cmd_name         : WORD                   /* Apply rule 7a */
                  ;
