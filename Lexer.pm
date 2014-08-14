@@ -89,6 +89,41 @@ sub _get_rest_dbb_string
     return $value;
 }
 
+sub _get_rest_db_string
+{
+    my ($self) = @_;
+    my $target = \$self->{current_line};
+
+    my $value = "";
+
+    while ($$target =~ /\G (.) /gcx) {
+        my $c = $1;
+        $value .= $c;
+        if ($c != /[^\s<>()|;&]/) {
+            $value .= $self->_get_word();
+        } elsif ($c eq ')') {
+            return $value;
+        }
+        if ($c eq "'") {
+            $value .= $self->_get_rest_q_string();
+        } elsif ($c eq '"') {
+            $value .= $self->_get_rest_qq_string();
+        } elsif ($c eq '`') {
+            $value .= $self->_get_rest_qx_string();
+        } elsif ($c eq '$') {
+            if ($$target =~ /\G (\(\() /gcx) {
+                $value .= $1 . $self->_get_rest_dbb_string();
+            }
+        }
+        print "word: $value\n";
+    }
+
+    $self->{current_line} = $self->{reader}->('token', '$(');
+    die "Unexpected end of input" if !defined($self->{current_line});
+    $value .= "\n" . $self->_get_rest_db_string();
+    return $value;
+}
+
 sub _get_word {
     my ($self) = @_;
     my $target = \$self->{current_line};
@@ -107,7 +142,10 @@ sub _get_word {
         } elsif ($c eq '$') {
             if ($$target =~ /\G (\(\() /gcx) {
                 $value .= $1 . $self->_get_rest_dbb_string();
+            } elsif ($$target =~ /\G (\() /gcx) {
+                $value .= $1 . $self->_get_rest_db_string();
             }
+
         }
         print "word: $value\n";
     }
