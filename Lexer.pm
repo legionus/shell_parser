@@ -142,7 +142,9 @@ sub _get_rest_db_string
         my $c = $1;
         $value .= $c;
         if ($c != /[^\s<>()|;&]/) {
-            $value .= $self->_get_word();
+            my $word = $self->_get_word();
+            next if !defined($word);
+            $value .= $word;
         } elsif ($c eq ')') {
             return $value;
         }
@@ -170,35 +172,38 @@ sub _get_word {
     my ($self) = @_;
     my $target = \$self->{current_line};
 
-    my $value = "";
+    my $value = undef;
 
     while ($$target =~ /\G ([^\s<>()|;&]) /gcx) {
+        $value //= "";
+
         my $c = $1;
-        $value .= $c;
         if ($c eq "'") {
-            $value .= $self->_get_rest_q_string();
+            $value .= $c . $self->_get_rest_q_string();
         } elsif ($c eq '"') {
-            $value .= $self->_get_rest_qq_string();
+            $value .= $c . $self->_get_rest_qq_string();
         } elsif ($c eq '`') {
-            $value .= $self->_get_rest_qx_string();
+            $value .= $c . $self->_get_rest_qx_string();
         } elsif ($c eq '$') {
             if ($$target =~ /\G (\(\() /gcx) {
-                $value .= $1 . $self->_get_rest_dbb_string();
+                $value .= $c . $1 . $self->_get_rest_dbb_string();
             } elsif ($$target =~ /\G (\() /gcx) {
-                $value .= $1 . $self->_get_rest_db_string();
+                $value .= $c . $1 . $self->_get_rest_db_string();
             }
         } elsif ($c eq '\\') {
             if ($$target =~ /\G (.) /gcx) {
                 $value .= $1;
             } else {
-                $value .= "\n";
-                $self->{current_line} = $self->{reader}->('token', '$(');
+                $self->{current_line} = $self->{reader}->('token', '\\');
                 die "Unexpected end of input" if !defined($self->{current_line});
                 $target = \$self->{current_line};
             }
+        } else {
+            $value .= $c;
         }
         print "word: $value\n";
     }
+
     return $value;
 }
 
@@ -240,7 +245,9 @@ sub _get_next_token {
 
         my $word = $self->_get_word();
         # if ($$target =~ /\G ([A-Za-z0-9\$\"'=]+) /gcx) {
-        if ($word ne "") {
+        if (defined($word)) {
+            redo if $word eq "";
+
             # my $word = $1;
             if ($prev_token eq 'For') {
                 return ('NAME', $word);
