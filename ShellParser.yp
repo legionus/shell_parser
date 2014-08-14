@@ -45,14 +45,19 @@ list             : list separator_op and_or
                  { [$_[1] }
                  ;
 and_or           :                         pipeline
+                 { [$_[1]] }
                  | and_or AND_IF linebreak pipeline
+                 { push(@{$_[1]}, [$_[2], $_[4]]); $_[1] }
                  | and_or OR_IF  linebreak pipeline
+                 { push(@{$_[1]}, [$_[2], $_[4]]); $_[1] }
                  ;
 pipeline         :      pipe_sequence
                  | Bang pipe_sequence
                  ;
 pipe_sequence    :                             command
+                 { ['PIPESEQ', $_[1]] }
                  | pipe_sequence '|' linebreak command
+                 { push(@{$_[1]}, $_[4]); $_[1] }
                  ;
 command          : simple_command
                  | compound_command
@@ -193,12 +198,19 @@ io_redirect      :           io_file
                  | IO_NUMBER io_here
                  ;
 io_file          : '<'       filename
+                 { [$_[1], $_[2]] }
                  | LESSAND   filename
+                 { [$_[1], $_[2]] }
                  | '>'       filename
+                 { [$_[1], $_[2]] }
                  | GREATAND  filename
+                 { [$_[1], $_[2]] }
                  | DGREAT    filename
+                 { [$_[1], $_[2]] }
                  | LESSGREAT filename
+                 { [$_[1], $_[2]] }
                  | CLOBBER   filename
+                 { [$_[1], $_[2]] }
                  ;
 filename         : WORD                      /* Apply rule 2 */
                  ;
