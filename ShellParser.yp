@@ -3,6 +3,7 @@ use Token::FuncDef;
 use Token::SubShell;
 use Token::PipeSeq;
 use Token::Command;
+use Token::Redirection;
 %}
 
 %token  WORD
@@ -205,19 +206,19 @@ io_redirect      :           io_file
                  | IO_NUMBER io_here
                  ;
 io_file          : '<'       filename
-                 { [$_[1], $_[2]] }
+                 { ShellParser::Token::Redirection->new($_[1], $_[2]) }
                  | LESSAND   filename
-                 { [$_[1], $_[2]] }
+                 { ShellParser::Token::Redirection->new($_[1], $_[2]) }
                  | '>'       filename
-                 { [$_[1], $_[2]] }
+                 { ShellParser::Token::Redirection->new($_[1], $_[2]) }
                  | GREATAND  filename
-                 { [$_[1], $_[2]] }
+                 { ShellParser::Token::Redirection->new($_[1], $_[2]) }
                  | DGREAT    filename
-                 { [$_[1], $_[2]] }
+                 { ShellParser::Token::Redirection->new($_[1], $_[2]) }
                  | LESSGREAT filename
-                 { [$_[1], $_[2]] }
+                 { ShellParser::Token::Redirection->new($_[1], $_[2]) }
                  | CLOBBER   filename
-                 { [$_[1], $_[2]] }
+                 { ShellParser::Token::Redirection->new($_[1], $_[2]) }
                  ;
 filename         : WORD                      /* Apply rule 2 */
                  ;
