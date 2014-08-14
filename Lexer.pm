@@ -67,15 +67,30 @@ sub _get_rest_qq_string {
 
     my $value = "";
 
-    $$target =~ /\G ([^"]*"|.*) /gcx;
-    $value = $1;
-    if ($value !~ /"$/) {
-        # FIXME: handle \", etc.
-        $self->{current_line} = $self->{reader}->('token', '"');
-        die "Unexpected end of input" if !defined($self->{current_line});
-        $value .= "\n" . $self->_get_rest_qq_string();
+    while ($$target =~ /\G (.) /gcx) {
+        my $c = $1;
+        $value .= $c;
+        if ($c eq '\\') {
+            if ($$target =~ /\G (.) /gcx) {
+                $value .= $1;
+            } else {
+                $value .= "\n";
+                $self->{current_line} = $self->{reader}->('token', '"');
+                die "Unexpected end of input" if !defined($self->{current_line});
+                $target = \$self->{current_line};
+            }
+        } elsif ($c eq '"') {
+            return $value;
+        } elsif ($c eq '$') {
+            if ($$target =~ /\G (\(\() /gcx) {
+                $value .= $1 . $self->_get_rest_dbb_string();
+            }
+        }
     }
 
+    $self->{current_line} = $self->{reader}->('token', '"');
+    die "Unexpected end of input" if !defined($self->{current_line});
+    $value .= "\n" . $self->_get_rest_qq_string();
     return $value;
 }
 
