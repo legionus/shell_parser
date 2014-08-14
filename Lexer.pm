@@ -3,7 +3,21 @@ package Lexer;
 use strict;
 use warnings;
 
-my @reserved_words = qw(if then else elif fi done do case esac while until for in);
+my @reserved_words = qw(
+    while
+    until
+    then
+    in
+    if
+    for
+    fi
+    esac
+    else
+    elif
+    done
+    do
+    case
+);
 
 sub new {
     my ($class, $reader) = @_;
@@ -145,7 +159,6 @@ sub _get_word {
             } elsif ($$target =~ /\G (\() /gcx) {
                 $value .= $1 . $self->_get_rest_db_string();
             }
-
         }
         print "word: $value\n";
     }
@@ -196,19 +209,19 @@ sub _get_next_token {
         return ('CLOBBER',   $1) if $$target =~ /\G (>\|)  /gcx;
         return ('CLOBBER',   $1) if $$target =~ /\G (>\|)  /gcx;
 
-        if ($$target =~ /\G (for) /gcx) {
-            $self->{prev_token} = 'For';
-            return ('For', $1);
-        }
-        foreach my $w (@reserved_words) {
-            if ($$target =~ /\G (\Q$w\E) /gcx) {
-                return (uc(substr($w, 0, 1)) . substr($w, 1), $1);
-            }
-        }
-
         my $word = $self->_get_word();
         # if ($$target =~ /\G ([A-Za-z0-9\$\"'=]+) /gcx) {
         if ($word ne "") {
+            if ($word eq 'for') {
+                $self->{prev_token} = 'For';
+                return ('For', $1);
+            }
+            foreach my $w (@reserved_words) {
+                if ($word eq $w) {
+                    return (uc(substr($w, 0, 1)) . substr($w, 1), $1);
+                }
+            }
+
             # my $word = $1;
             if ($prev_token eq 'For') {
                 return ('NAME', $word);
@@ -218,12 +231,11 @@ sub _get_next_token {
                 return ('NAME', $word);
             }
 
-
-            return ('Lbrace', $word) if $word eq '{';
-            return ('Rbrace', $word) if $word eq '}';
-            return ('Bang',   $word) if $word eq '!';
-
             if (!$self->{downgrade_assignment_word}) {
+                return ('Lbrace', $word) if $word eq '{';
+                return ('Rbrace', $word) if $word eq '}';
+                return ('Bang',   $word) if $word eq '!';
+
                 return ('ASSIGNMENT_WORD', $word) if ($word =~ /^[A-Za-z0-9]+=/);
             }
 
