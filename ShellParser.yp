@@ -6,6 +6,7 @@ use Token::Command;
 use Token::Redirection;
 use Token::DoGroup;
 use Token::Braces;
+use Token::For;
 %}
 
 %token  WORD
@@ -100,11 +101,11 @@ term             : term separator and_or
                  { ['TERM', $_[1]] }
                  ;
 for_clause       : For name linebreak                            do_group
-                 { ['FOR_IN_@', $_[2], $_[4]] }
+                 { ShellParser::Token::For->new($_[2], undef, $_[4]) }
                  | For name linebreak in          sequential_sep do_group
-                 { ['FOR', $_[2], 'IN NOTHING', $_[6]] }
+                 { ShellParser::Token::For->new($_[2], [], $_[6]) }
                  | For name linebreak in wordlist sequential_sep do_group
-                 { ['FOR', $_[2], $_[5], $_[7]] }
+                 { ShellParser::Token::For->new($_[2], $_[5], $_[7]) }
                  ;
 name             : NAME                     /* Apply rule 5 */
                  ;
