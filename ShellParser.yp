@@ -13,6 +13,7 @@ use ShellParser::Token::Redirection;
 use ShellParser::Token::SubShell;
 use ShellParser::Token::Until;
 use ShellParser::Token::While;
+use ShellParser::Token::Word;
 %}
 
 %token  WORD
@@ -119,9 +120,9 @@ name             : NAME                     /* Apply rule 5 */
 in               : In                       /* Apply rule 6 */
                  ;
 wordlist         : wordlist WORD
-                 { push(@{$_[1]}, $_[2]); $_[1] }
+                 { push(@{$_[1]}, ShellParser::Token::Word->new($_[2])); $_[1] }
                  |          WORD
-                 { [$_[1]] }
+                 { [ShellParser::Token::Word->new($_[1])] }
                  ;
 case_clause      : Case WORD linebreak in linebreak case_list    Esac
                  | Case WORD linebreak in linebreak case_list_ns Esac
@@ -210,9 +211,9 @@ cmd_suffix       :            io_redirect
                  | cmd_suffix io_redirect
                  { push(@{$_[1]}, $_[2]); $_[1] }
                  |            WORD
-                 { [$_[1]] }
+                 { [ShellParser::Token::Word->new($_[1])] }
                  | cmd_suffix WORD
-                 { push(@{$_[1]}, $_[2]); $_[1] }
+                 { push(@{$_[1]}, ShellParser::Token::Word->new($_[2])); $_[1] }
                  ;
 redirect_list    :               io_redirect
                  | redirect_list io_redirect

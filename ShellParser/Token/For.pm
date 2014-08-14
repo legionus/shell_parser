@@ -20,7 +20,7 @@ sub print {
     if ($self->{words}) {
         print $sep x $depth . $sep . "For::words()\n";
         foreach my $word (@{$self->{words}}) {
-            print $sep x $depth . $sep . $sep . "$word\n"; # FIXME
+            $word->print($sep, $depth + 2);
         }
     }
     print $sep x $depth . $sep . "For::body()\n";
