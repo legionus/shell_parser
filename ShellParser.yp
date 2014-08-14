@@ -6,6 +6,7 @@ use ShellParser::Token::Command;
 use ShellParser::Token::DoGroup;
 use ShellParser::Token::For;
 use ShellParser::Token::FuncDef;
+use ShellParser::Token::If;
 use ShellParser::Token::List;
 use ShellParser::Token::Pipeline;
 use ShellParser::Token::Redirection;
@@ -146,13 +147,16 @@ pattern          :             WORD         /* Apply rule 4 */
                  | pattern '|' WORD         /* Do not apply rule 4 */
                  ;
 if_clause        : If compound_list Then compound_list else_part Fi
-                 { ['IF', $_[2], $_[4], $_[5]] }
+                 { my $r = ShellParser::Token::If->new($_[2], $_[4]); $r->append($_[5]); $r }
                  | If compound_list Then compound_list           Fi
-                 { ['IF', $_[2], $_[4], 'NO_ELSE'] }
+                 { ShellParser::Token::If->new($_[2], $_[4]) }
                  ;
 else_part        : Elif compound_list Then compound_list
+                 { ShellParser::Token::If->new($_[2], $_[4]) }
                  | Elif compound_list Then compound_list else_part
+                 { my $r = ShellParser::Token::If->new($_[2], $_[4]); $r->append($_[5]); $r }
                  | Else compound_list
+                 { ShellParser::Token::If->new(undef, $_[2]) }
                  ;
 while_clause     : While compound_list do_group
                  { ShellParser::Token::While->new($_[2],$_[3]) }

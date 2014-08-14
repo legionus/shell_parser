@@ -14,4 +14,9 @@ sub new {
     }, $class);
 }
 
+sub print {
+    my ($self, $sep, $depth) = @_;
+    print $sep x $depth . "Command(name=...)\n";
+}
+
 1;
