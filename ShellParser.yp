@@ -1,4 +1,5 @@
 %{
+use ShellParser::Token::AndOrList;
 use ShellParser::Token::Bang;
 use ShellParser::Token::Braces;
 use ShellParser::Token::Command;
@@ -6,7 +7,7 @@ use ShellParser::Token::DoGroup;
 use ShellParser::Token::For;
 use ShellParser::Token::FuncDef;
 use ShellParser::Token::List;
-use ShellParser::Token::PipeLine;
+use ShellParser::Token::Pipeline;
 use ShellParser::Token::Redirection;
 use ShellParser::Token::SubShell;
 use ShellParser::Token::Until;
@@ -55,23 +56,23 @@ complete_command : list separator
                  | list
                  ;
 list             : list separator_op and_or
-                 { push(@{$_[1]}, $_[2], $_[3]), $_[1] }
+                 { push(@{$_[1]}, $_[2], $_[3]); $_[1] }
                  |                   and_or
-                 { [$_[1] }
+                 { [$_[1]] }
                  ;
 and_or           :                         pipeline
-                 { [$_[1]] }
+                 { ShellParser::Token::AndOrList->new($_[1]) }
                  | and_or AND_IF linebreak pipeline
-                 { push(@{$_[1]}, [$_[2], $_[4]]); $_[1] }
+                 { $_[1]->append($_[2], $_[4]); $_[1] }
                  | and_or OR_IF  linebreak pipeline
-                 { push(@{$_[1]}, [$_[2], $_[4]]); $_[1] }
+                 { $_[1]->append($_[2], $_[4]); $_[1] }
                  ;
 pipeline         :      pipe_sequence
                  | Bang pipe_sequence
-                 { ShellParser::Token::Bang->new($_[2]) }
+                 { $_[2]->{banged} = 1; $_[2] }
                  ;
 pipe_sequence    :                             command
-                 { ShellParser::Token::PipeLine->new($_[1]) }
+                 { ShellParser::Token::Pipeline->new($_[1]) }
                  | pipe_sequence '|' linebreak command
                  { $_[1]->append($_[4]); $_[1] }
                  ;
@@ -92,18 +93,18 @@ subshell         : '(' compound_list ')'
                  { ShellParser::Token::SubShell->new($_[2]) }
                  ;
 compound_list    :              term
-                 { ShellParser::Token::List->new($_[1], '') }
+                 { $_[1]->{body}->[-1]->{sep} = ''; $_[1] }
                  | newline_list term
-                 { ShellParser::Token::List->new($_[2], '') }
+                 { $_[2]->{body}->[-1]->{sep} = ''; $_[2] }
                  |              term separator
-                 { ShellParser::Token::List->new($_[1], $_[2]) }
+                 { $_[1]->{body}->[-1]->{sep} = $_[2]; $_[1] }
                  | newline_list term separator
-                 { ShellParser::Token::List->new($_[2], $_[3]) }
+                 { $_[2]->{body}->[-1]->{sep} = $_[3]; $_[2] }
                  ;
 term             : term separator and_or
-                 { push(@{$_[1]}, $_[2], $_[3]); $_[1] }
+                 { $_[1]->{body}->[-1]->{sep} = $_[2]; $_[1]->append($_[3]); $_[1] }
                  |                and_or
-                 { ['TERM', $_[1]] }
+                 { ShellParser::Token::List->new($_[1]) }
                  ;
 for_clause       : For name linebreak                            do_group
                  { ShellParser::Token::For->new($_[2], undef, $_[4]) }

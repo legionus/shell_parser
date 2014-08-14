@@ -1,4 +1,4 @@
-package ShellParser::Token::PipeLine;
+package ShellParser::Token::Pipeline;
 
 use strict;
 use warnings;
@@ -9,6 +9,7 @@ sub new {
     my ($class, $element) = @_;
     return bless({
         body => [$element],
+        banged => 0,
     }, $class);
 }
 

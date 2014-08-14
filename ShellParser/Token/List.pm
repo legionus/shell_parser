@@ -6,11 +6,15 @@ use warnings;
 use base 'ShellParser::Token';
 
 sub new {
-    my ($class, $body, $separator) = @_;
+    my ($class, $body) = @_;
     return bless({
-        separator => $separator,
-        body      => $body,
+        body => [$body],
     }, $class);
+}
+
+sub append {
+    my ($self, $element) = @_;
+    push(@{$self->{body}}, $element);
 }
 
 1;
