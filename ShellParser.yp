@@ -1,7 +1,7 @@
 %{
 use ShellParser::Token::AndOrList;
 use ShellParser::Token::Bang;
-use ShellParser::Token::Braces;
+use ShellParser::Token::BraceGroup;
 use ShellParser::Token::Command;
 use ShellParser::Token::DoGroup;
 use ShellParser::Token::For;
@@ -177,7 +177,7 @@ function_body    : compound_command                /* Apply rule 9 */
 fname            : NAME                            /* Apply rule 8 */
                  ;
 brace_group      : Lbrace compound_list Rbrace
-                 { ShellParser::Token::Braces->new($_[2]) }
+                 { ShellParser::Token::BraceGroup->new($_[2]) }
                  ;
 do_group         : Do compound_list Done           /* Apply rule 6 */
                  { ShellParser::Token::DoGroup->new($_[2]) }
