@@ -1,5 +1,8 @@
 %{
 use Token::FuncDef;
+use Token::SubShell;
+use Token::PipeSeq;
+use Token::Command;
 %}
 
 %token  WORD
@@ -59,9 +62,9 @@ pipeline         :      pipe_sequence
                  | Bang pipe_sequence
                  ;
 pipe_sequence    :                             command
-                 { ['PIPESEQ', $_[1]] }
+                 { ShellParser::Token::PipeSeq->new($_[1]) }
                  | pipe_sequence '|' linebreak command
-                 { push(@{$_[1]}, $_[4]); $_[1] }
+                 { $_[1]->append($_[4]); $_[1] }
                  ;
 command          : simple_command
                  | compound_command
@@ -77,7 +80,7 @@ compound_command : brace_group
                  | until_clause
                  ;
 subshell         : '(' compound_list ')'
-                 { ['SUBSHELL', $_[2]] }
+                 { ShellParser::Token::SubShell->new($_[2]) }
                  ;
 compound_list    :              term
                  { ['COMP_LIST_1', $_[1]] }
@@ -161,15 +164,15 @@ do_group         : Do compound_list Done           /* Apply rule 6 */
                  { ['DO_GROUP', $_[2]] }
                  ;
 simple_command   : cmd_prefix cmd_word cmd_suffix
-                 { {SIMPLE_COMMAND => $_[2], PREFIX => $_[1], SUFFIX => $_[3]} }
+                 { ShellParser::Token::Command->new($_[2], $_[3], $_[1]) }
                  | cmd_prefix cmd_word
-                 { {SIMPLE_COMMAND => $_[2], PREFIX => $_[1]} }
+                 { ShellParser::Token::Command->new($_[2], [], $_[1]) }
                  | cmd_prefix
-                 { {SIMPLE_COMMAND => 'NOT DEFINED', PREFIX => $_[1]} }
+                 { ShellParser::Token::Command->new("", [], $_[1]) }
                  | cmd_name cmd_suffix
-                 { {SIMPLE_COMMAND => $_[1], SUFFIX => $_[2]} }
+                 { ShellParser::Token::Command->new($_[1], $_[2]) }
                  | cmd_name
-                 { {SIMPLE_COMMAND => $_[1]} }
+                 { ShellParser::Token::Command->new($_[1]) }
                  ;
 cmd_name         : WORD                   /* Apply rule 7a */
                  ;
