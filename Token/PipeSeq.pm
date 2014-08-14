@@ -7,11 +7,9 @@ use base 'ShellParser::Token';
 
 sub new {
     my ($class, $element) = @_;
-    my $obj = {
-        body => [],
-    };
-    append($obj, $element) if defined($element);
-    return bless($obj, $class);
+    return bless({
+        body => [$element],
+    }, $class);
 }
 
 sub append {
