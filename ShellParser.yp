@@ -1,16 +1,16 @@
 %{
-use Token::List;
-use Token::Bang;
-use Token::FuncDef;
-use Token::SubShell;
-use Token::PipeLine;
-use Token::Command;
-use Token::Redirection;
-use Token::DoGroup;
-use Token::Braces;
-use Token::For;
-use Token::While;
-use Token::Until;
+use ShellParser::Token::Bang;
+use ShellParser::Token::Braces;
+use ShellParser::Token::Command;
+use ShellParser::Token::DoGroup;
+use ShellParser::Token::For;
+use ShellParser::Token::FuncDef;
+use ShellParser::Token::List;
+use ShellParser::Token::PipeLine;
+use ShellParser::Token::Redirection;
+use ShellParser::Token::SubShell;
+use ShellParser::Token::Until;
+use ShellParser::Token::While;
 %}
 
 %token  WORD
