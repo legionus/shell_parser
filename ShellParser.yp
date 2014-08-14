@@ -5,6 +5,7 @@ use Token::PipeSeq;
 use Token::Command;
 use Token::Redirection;
 use Token::DoGroup;
+use Token::Braces;
 %}
 
 %token  WORD
@@ -160,7 +161,7 @@ function_body    : compound_command                /* Apply rule 9 */
 fname            : NAME                            /* Apply rule 8 */
                  ;
 brace_group      : Lbrace compound_list Rbrace
-                 { {'IN_BRACES' => $_[2]} }
+                 { ShellParser::Token::Braces->new($_[2]) }
                  ;
 do_group         : Do compound_list Done           /* Apply rule 6 */
                  { ShellParser::Token::DoGroup->new($_[2]) }
