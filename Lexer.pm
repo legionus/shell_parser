@@ -19,6 +19,19 @@ my @reserved_words = qw(
     case
 );
 
+my %operators = (
+    '&&'  => 'AND_IF',
+    '||'  => 'OR_IF',
+    ';;'  => 'DSEMI',
+    '<<'  => 'DLESS',
+    '>>'  => 'DGREAT',
+    '<&'  => 'LESSAND',
+    '>&'  => 'GREATAND',
+    '<>'  => 'LESSGREAT',
+    '<<-' => 'DLESSDASH',
+    '>|'  => 'CLOBBER',
+);
+
 sub new {
     my ($class, $reader) = @_;
     my $self = {
@@ -206,17 +219,9 @@ sub _get_next_token {
         }
         redo if $$target =~ /\G \s+ /gcx;
 
-        return ('AND_IF',    $1) if $$target =~ /\G (&&)   /gcx;
-        return ('OR_IF',     $1) if $$target =~ /\G (\|\|) /gcx;
-        return ('DSEMI',     $1) if $$target =~ /\G (;;)   /gcx;
-        return ('DLESS',     $1) if $$target =~ /\G (<<)   /gcx;
-        return ('DGREAT',    $1) if $$target =~ /\G (>>)   /gcx;
-        return ('LESSAND',   $1) if $$target =~ /\G (<&)   /gcx;
-        return ('GREATAND',  $1) if $$target =~ /\G (>&)   /gcx;
-        return ('LESSGREAT', $1) if $$target =~ /\G (<>)   /gcx;
-        return ('DLESSDASH', $1) if $$target =~ /\G (<<-)  /gcx;
-        return ('CLOBBER',   $1) if $$target =~ /\G (>\|)  /gcx;
-        return ('CLOBBER',   $1) if $$target =~ /\G (>\|)  /gcx;
+        foreach my $op (keys %operators) {
+            return ($operators{$op}, $1) if $$target =~ /\G (\Q$op\E) /gcx;
+        }
 
         my $word = $self->_get_word();
         # if ($$target =~ /\G ([A-Za-z0-9\$\"'=]+) /gcx) {
