@@ -159,6 +159,15 @@ sub _get_word {
             } elsif ($$target =~ /\G (\() /gcx) {
                 $value .= $1 . $self->_get_rest_db_string();
             }
+        } elsif ($c eq '\\') {
+            if ($$target =~ /\G (.) /gcx) {
+                $value .= $1;
+            } else {
+                $value .= "\n";
+                $self->{current_line} = $self->{reader}->('token', '$(');
+                die "Unexpected end of input" if !defined($self->{current_line});
+                $target = \$self->{current_line};
+            }
         }
         print "word: $value\n";
     }
