@@ -4,6 +4,7 @@ use Token::SubShell;
 use Token::PipeSeq;
 use Token::Command;
 use Token::Redirection;
+use Token::DoGroup;
 %}
 
 %token  WORD
@@ -162,7 +163,7 @@ brace_group      : Lbrace compound_list Rbrace
                  { {'IN_BRACES' => $_[2]} }
                  ;
 do_group         : Do compound_list Done           /* Apply rule 6 */
-                 { ['DO_GROUP', $_[2]] }
+                 { ShellParser::Token::DoGroup->new($_[2]) }
                  ;
 simple_command   : cmd_prefix cmd_word cmd_suffix
                  { ShellParser::Token::Command->new($_[2], $_[3], $_[1]) }
