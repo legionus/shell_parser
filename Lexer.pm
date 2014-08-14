@@ -221,16 +221,6 @@ sub _get_next_token {
         my $word = $self->_get_word();
         # if ($$target =~ /\G ([A-Za-z0-9\$\"'=]+) /gcx) {
         if ($word ne "") {
-            if ($word eq 'for') {
-                $self->{prev_token} = 'For';
-                return ('For', $1);
-            }
-            foreach my $w (@reserved_words) {
-                if ($word eq $w) {
-                    return (uc(substr($w, 0, 1)) . substr($w, 1), $1);
-                }
-            }
-
             # my $word = $1;
             if ($prev_token eq 'For') {
                 return ('NAME', $word);
@@ -241,6 +231,16 @@ sub _get_next_token {
             }
 
             if (!$self->{downgrade_assignment_word}) {
+                if ($word eq 'for') {
+                    $self->{prev_token} = 'For';
+                    return ('For', $1);
+                }
+                foreach my $w (@reserved_words) {
+                    if ($word eq $w) {
+                        return (uc(substr($w, 0, 1)) . substr($w, 1), $1);
+                    }
+                }
+
                 return ('Lbrace', $word) if $word eq '{';
                 return ('Rbrace', $word) if $word eq '}';
                 return ('Bang',   $word) if $word eq '!';
