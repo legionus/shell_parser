@@ -8,6 +8,7 @@ use Token::DoGroup;
 use Token::Braces;
 use Token::For;
 use Token::While;
+use Token::Until;
 %}
 
 %token  WORD
@@ -153,6 +154,7 @@ while_clause     : While compound_list do_group
                  { ShellParser::Token::While->new($_[2],$_[3]) }
                  ;
 until_clause     : Until compound_list do_group
+                 { ShellParser::Token::Until->new($_[2],$_[3]) }
                  ;
 function_definition
                  : fname '(' ')' linebreak function_body
