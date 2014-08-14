@@ -1,5 +1,16 @@
 %{
+use Token::List;
+use Token::Bang;
 use Token::FuncDef;
+use Token::SubShell;
+use Token::PipeLine;
+use Token::Command;
+use Token::Redirection;
+use Token::DoGroup;
+use Token::Braces;
+use Token::For;
+use Token::While;
+use Token::Until;
 %}
 
 %token  WORD
@@ -57,11 +68,12 @@ and_or           :                         pipeline
                  ;
 pipeline         :      pipe_sequence
                  | Bang pipe_sequence
+                 { ShellParser::Token::Bang->new($_[2]) }
                  ;
 pipe_sequence    :                             command
-                 { ['PIPESEQ', $_[1]] }
+                 { ShellParser::Token::PipeLine->new($_[1]) }
                  | pipe_sequence '|' linebreak command
-                 { push(@{$_[1]}, $_[4]); $_[1] }
+                 { $_[1]->append($_[4]); $_[1] }
                  ;
 command          : simple_command
                  | compound_command
@@ -77,16 +89,16 @@ compound_command : brace_group
                  | until_clause
                  ;
 subshell         : '(' compound_list ')'
-                 { ['SUBSHELL', $_[2]] }
+                 { ShellParser::Token::SubShell->new($_[2]) }
                  ;
 compound_list    :              term
-                 { ['COMP_LIST_1', $_[1]] }
+                 { ShellParser::Token::List->new($_[1], '') }
                  | newline_list term
-                 { ['COMP_LIST_2', $_[2]] }
+                 { ShellParser::Token::List->new($_[2], '') }
                  |              term separator
-                 { ['COMP_LIST_3', $_[1], $_[2]] }
+                 { ShellParser::Token::List->new($_[1], $_[2]) }
                  | newline_list term separator
-                 { ['COMP_LIST_4', $_[2], $_[3]] }
+                 { ShellParser::Token::List->new($_[2], $_[3]) }
                  ;
 term             : term separator and_or
                  { push(@{$_[1]}, $_[2], $_[3]); $_[1] }
@@ -94,18 +106,20 @@ term             : term separator and_or
                  { ['TERM', $_[1]] }
                  ;
 for_clause       : For name linebreak                            do_group
-                 { ['FOR_IN_@', $_[2], $_[4]] }
+                 { ShellParser::Token::For->new($_[2], undef, $_[4]) }
                  | For name linebreak in          sequential_sep do_group
-                 { ['FOR', $_[2], 'IN NOTHING', $_[6]] }
+                 { ShellParser::Token::For->new($_[2], [], $_[6]) }
                  | For name linebreak in wordlist sequential_sep do_group
-                 { ['FOR', $_[2], $_[5], $_[7]] }
+                 { ShellParser::Token::For->new($_[2], $_[5], $_[7]) }
                  ;
 name             : NAME                     /* Apply rule 5 */
                  ;
 in               : In                       /* Apply rule 6 */
                  ;
 wordlist         : wordlist WORD
+                 { push(@{$_[1]}, $_[2]); $_[1] }
                  |          WORD
+                 { [$_[1]] }
                  ;
 case_clause      : Case WORD linebreak in linebreak case_list    Esac
                  | Case WORD linebreak in linebreak case_list_ns Esac
@@ -140,36 +154,38 @@ else_part        : Elif compound_list Then compound_list
                  | Else compound_list
                  ;
 while_clause     : While compound_list do_group
+                 { ShellParser::Token::While->new($_[2],$_[3]) }
                  ;
 until_clause     : Until compound_list do_group
+                 { ShellParser::Token::Until->new($_[2],$_[3]) }
                  ;
 function_definition
                  : fname '(' ')' linebreak function_body
-                 { ShellParser::Token::FuncDef->new($_[1], $_[5]) }
+                 { ShellParser::Token::FuncDef->new($_[1], $_[5]->{body}, $_[5]->{redirect}) }
                  ;
 function_body    : compound_command                /* Apply rule 9 */
-                 { {'NO_REDIRECT' => $_[1]} }
+                 { {'body' => $_[1], 'redirect' => []} }
                  | compound_command redirect_list  /* Apply rule 9 */
-                 { {'WITH_REDIRECT' => $_[1], 'REDIRECT' => $_[2]} }
+                 { {'body' => $_[1], 'redirect' => $_[2]} }
                  ;
 fname            : NAME                            /* Apply rule 8 */
                  ;
 brace_group      : Lbrace compound_list Rbrace
-                 { {'IN_BRACES' => $_[2]} }
+                 { ShellParser::Token::Braces->new($_[2]) }
                  ;
 do_group         : Do compound_list Done           /* Apply rule 6 */
-                 { ['DO_GROUP', $_[2]] }
+                 { ShellParser::Token::DoGroup->new($_[2]) }
                  ;
 simple_command   : cmd_prefix cmd_word cmd_suffix
-                 { {SIMPLE_COMMAND => $_[2], PREFIX => $_[1], SUFFIX => $_[3]} }
+                 { ShellParser::Token::Command->new($_[2], $_[3], $_[1]) }
                  | cmd_prefix cmd_word
-                 { {SIMPLE_COMMAND => $_[2], PREFIX => $_[1]} }
+                 { ShellParser::Token::Command->new($_[2], [], $_[1]) }
                  | cmd_prefix
-                 { {SIMPLE_COMMAND => 'NOT DEFINED', PREFIX => $_[1]} }
+                 { ShellParser::Token::Command->new(undef, [], $_[1]) }
                  | cmd_name cmd_suffix
-                 { {SIMPLE_COMMAND => $_[1], SUFFIX => $_[2]} }
+                 { ShellParser::Token::Command->new($_[1], $_[2], []) }
                  | cmd_name
-                 { {SIMPLE_COMMAND => $_[1]} }
+                 { ShellParser::Token::Command->new($_[1], [], []) }
                  ;
 cmd_name         : WORD                   /* Apply rule 7a */
                  ;
@@ -202,19 +218,19 @@ io_redirect      :           io_file
                  | IO_NUMBER io_here
                  ;
 io_file          : '<'       filename
-                 { [$_[1], $_[2]] }
+                 { ShellParser::Token::Redirection->new($_[1], $_[2]) }
                  | LESSAND   filename
-                 { [$_[1], $_[2]] }
+                 { ShellParser::Token::Redirection->new($_[1], $_[2]) }
                  | '>'       filename
-                 { [$_[1], $_[2]] }
+                 { ShellParser::Token::Redirection->new($_[1], $_[2]) }
                  | GREATAND  filename
-                 { [$_[1], $_[2]] }
+                 { ShellParser::Token::Redirection->new($_[1], $_[2]) }
                  | DGREAT    filename
-                 { [$_[1], $_[2]] }
+                 { ShellParser::Token::Redirection->new($_[1], $_[2]) }
                  | LESSGREAT filename
-                 { [$_[1], $_[2]] }
+                 { ShellParser::Token::Redirection->new($_[1], $_[2]) }
                  | CLOBBER   filename
-                 { [$_[1], $_[2]] }
+                 { ShellParser::Token::Redirection->new($_[1], $_[2]) }
                  ;
 filename         : WORD                      /* Apply rule 2 */
                  ;
