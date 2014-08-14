@@ -1,5 +1,6 @@
 %{
 use Token::List;
+use Token::Bang;
 use Token::FuncDef;
 use Token::SubShell;
 use Token::PipeLine;
@@ -67,6 +68,7 @@ and_or           :                         pipeline
                  ;
 pipeline         :      pipe_sequence
                  | Bang pipe_sequence
+                 { ShellParser::Token::Bang->new($_[2]) }
                  ;
 pipe_sequence    :                             command
                  { ShellParser::Token::PipeLine->new($_[1]) }
