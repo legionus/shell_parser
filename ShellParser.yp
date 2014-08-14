@@ -1,3 +1,7 @@
+%{
+use Token::FuncDef;
+%}
+
 %token  WORD
 %token  ASSIGNMENT_WORD
 %token  NAME
@@ -141,7 +145,7 @@ until_clause     : Until compound_list do_group
                  ;
 function_definition
                  : fname '(' ')' linebreak function_body
-                 { {'FUNCDEF' => [$_[1], $_[5]]} }
+                 { ShellParser::Token::FuncDef->new($_[1], $_[5]) }
                  ;
 function_body    : compound_command                /* Apply rule 9 */
                  { {'NO_REDIRECT' => $_[1]} }
