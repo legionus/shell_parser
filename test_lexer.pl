@@ -47,10 +47,10 @@ my $lex = Lexer->new(sub {
 });
 
 while (1) {
-	my $lexem = $lex->get_next_lexem();
-    last if !defined($lexem);
+	my $lexeme = $lex->get_next_lexeme();
+    last if !defined($lexeme);
 
-    my ($first_part, @parts) = split(/\n/, $lexem, -1);
+    my ($first_part, @parts) = split(/\n/, $lexeme, -1);
     $ind = "^";
     concat($first_part);
     foreach my $part (@parts) {

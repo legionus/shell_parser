@@ -186,7 +186,7 @@ sub _get_word {
     return $value;
 }
 
-sub get_next_lexem {
+sub get_next_lexeme {
     my ($self) = @_;
 
     if (!defined($self->{current_line})) {
@@ -214,7 +214,7 @@ sub get_next_lexem {
         return ($1, $1) if $$target =~ /\G (.) /gcx;
 
         $self->{current_line} = undef;
-        return $self->get_next_lexem();
+        return $self->get_next_lexeme();
     }
 }
 

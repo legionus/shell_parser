@@ -49,60 +49,60 @@ sub new {
 sub _get_next_token {
     my ($self) = @_;
 
-    my $lexem = $self->{lexer}->get_next_lexem();
-    if (!defined($lexem)) {
+    my $lexeme = $self->{lexer}->get_next_lexeme();
+    if (!defined($lexeme)) {
         return ('', undef);
     }
 
-    if ($lexem eq "\n") {
+    if ($lexeme eq "\n") {
         $self->{downgrade_assignment_word} = 0;
         return ('NEWLINE', '');
     }
-    if ($lexem =~ /^#/) {
+    if ($lexeme =~ /^#/) {
         $self->{downgrade_assignment_word} = 0;
-        return ('NEWLINE', $lexem);
+        return ('NEWLINE', $lexeme);
     }
-    if ($lexem =~ /^\s+$/) {
+    if ($lexeme =~ /^\s+$/) {
         return $self->_get_next_token();
     }
 
     foreach my $op (keys %operators) {
-        if ($lexem eq $op) {
+        if ($lexeme eq $op) {
             if ($op eq ';;') {
                 $self->{case_state} = 3;
             }
-            return ($operators{$op}, $lexem);
+            return ($operators{$op}, $lexeme);
         }
     }
 
-    if ($lexem =~ /^[<>()|;&]$/) {
+    if ($lexeme =~ /^[<>()|;&]$/) {
         $self->{downgrade_assignment_word} = 0;
-        if ($self->{case_state} == 3 && $lexem eq ')') {
+        if ($self->{case_state} == 3 && $lexeme eq ')') {
             $self->{case_state} = 0;
-            return ($lexem, $lexem);
+            return ($lexeme, $lexeme);
         }
-        return ($lexem, $lexem);
+        return ($lexeme, $lexeme);
     }
 
     if ($self->{for_state}) {
         $self->{for_state} = 0;
-        return ('WORD', $lexem);
+        return ('WORD', $lexeme);
     }
     if ($self->{case_state} == 1) {
         $self->{case_state} = 2;
-        return ('WORD', $lexem);
+        return ('WORD', $lexeme);
     }
     if ($self->{case_state} == 3) {
-        if ($lexem eq 'esac') {
+        if ($lexeme eq 'esac') {
             $self->{case_state} = 0;
-            return ('Esac', $lexem);
+            return ('Esac', $lexeme);
         }
-        return ('WORD', $lexem);
+        return ('WORD', $lexeme);
     }
 
     if (!$self->{downgrade_assignment_word}) {
         foreach my $w (@reserved_words) {
-            if ($lexem eq $w) {
+            if ($lexeme eq $w) {
                 if ($w eq 'for') {
                     $self->{for_state} = 1;
                 } elsif ($w eq 'case') {
@@ -118,16 +118,16 @@ sub _get_next_token {
             }
         }
 
-        return ('Lbrace', $lexem) if $lexem eq '{';
-        return ('Rbrace', $lexem) if $lexem eq '}';
-        return ('Bang',   $lexem) if $lexem eq '!';
+        return ('Lbrace', $lexeme) if $lexeme eq '{';
+        return ('Rbrace', $lexeme) if $lexeme eq '}';
+        return ('Bang',   $lexeme) if $lexeme eq '!';
 
-        return ('ASSIGNMENT_WORD', $lexem) if ($lexem =~ /^[A-Za-z0-9]+=/);
+        return ('ASSIGNMENT_WORD', $lexeme) if ($lexeme =~ /^[A-Za-z0-9]+=/);
     }
 
     $self->{downgrade_assignment_word} = 1;
 
-    return ('WORD', $lexem);
+    return ('WORD', $lexeme);
 }
 
 1;
