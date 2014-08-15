@@ -87,7 +87,7 @@ sub _get_rest_qx_string {
         # FIXME: handle \", etc.
         $self->{current_line} = $self->{reader}->('token', '`');
         die "Unexpected end of input" if !defined($self->{current_line});
-        $value .= "\n" . $self->_get_rest_qq_string();
+        $value .= "\n" . $self->_get_rest_qx_string();
     }
 
     return $value;
