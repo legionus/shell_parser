@@ -5,6 +5,15 @@ use warnings;
 
 use Lexer;
 
+use constant {
+    STATE_NORMAL            => 0,
+    STATE_COMMAND           => 1,
+    STATE_WAIT_NAME         => 2,
+    STATE_CASE_WAIT_WORD    => 3,
+    STATE_CASE_WAIT_IN      => 4,
+    STATE_CASE_WAIT_PATTERN => 5,
+};
+
 my @reserved_words = qw(
     while
     until
@@ -38,10 +47,7 @@ sub new {
     my ($class, $reader) = @_;
     my $self = {
         lexer => Lexer->new($reader),
-        state => {},
-        for_state => 0,
-        case_state => 0,
-        downgrade_assignment_word => 0,
+        state => STATE_NORMAL,
     };
     return bless($self, $class);
 }
@@ -55,11 +61,15 @@ sub _get_next_token {
     }
 
     if ($lexeme eq "\n") {
-        $self->{downgrade_assignment_word} = 0;
+        if ($self->{state} != STATE_CASE_WAIT_PATTERN) {
+            $self->{state} = STATE_NORMAL;
+        }
         return ('NEWLINE', '');
     }
     if ($lexeme =~ /^#/) {
-        $self->{downgrade_assignment_word} = 0;
+        if ($self->{state} != STATE_CASE_WAIT_PATTERN) {
+            $self->{state} = STATE_NORMAL;
+        }
         return ('NEWLINE', $lexeme);
     }
     if ($lexeme =~ /^\s+$/) {
@@ -69,48 +79,29 @@ sub _get_next_token {
     foreach my $op (keys %operators) {
         if ($lexeme eq $op) {
             if ($op eq ';;') {
-                $self->{case_state} = 3;
+                $self->{state} = STATE_CASE_WAIT_PATTERN;
             }
             return ($operators{$op}, $lexeme);
         }
     }
 
     if ($lexeme =~ /^[<>()|;&]$/) {
-        $self->{downgrade_assignment_word} = 0;
-        if ($self->{case_state} == 3 && $lexeme eq ')') {
-            $self->{case_state} = 0;
+        if ($self->{state} == STATE_CASE_WAIT_PATTERN && $lexeme eq ')') {
+            $self->{state} = STATE_NORMAL;
+            return ($lexeme, $lexeme);
+        } else {
+            $self->{state} = STATE_NORMAL;
             return ($lexeme, $lexeme);
         }
-        return ($lexeme, $lexeme);
     }
 
-    if ($self->{for_state}) {
-        $self->{for_state} = 0;
-        return ('WORD', $lexeme);
-    }
-    if ($self->{case_state} == 1) {
-        $self->{case_state} = 2;
-        return ('WORD', $lexeme);
-    }
-    if ($self->{case_state} == 3) {
-        if ($lexeme eq 'esac') {
-            $self->{case_state} = 0;
-            return ('Esac', $lexeme);
-        }
-        return ('WORD', $lexeme);
-    }
-
-    if (!$self->{downgrade_assignment_word}) {
+    if ($self->{state} == STATE_NORMAL) {
         foreach my $w (@reserved_words) {
             if ($lexeme eq $w) {
                 if ($w eq 'for') {
-                    $self->{for_state} = 1;
+                    $self->{state} = STATE_WAIT_NAME;
                 } elsif ($w eq 'case') {
-                    $self->{case_state} = 1;
-                } elsif ($w eq 'in') {
-                    if ($self->{case_state} == 2) {
-                        $self->{case_state} = 3;
-                    }
+                    $self->{state} = STATE_CASE_WAIT_WORD;
                 } elsif ($w eq 'esac') {
                     die "unexpected esac";
                 }
@@ -123,11 +114,35 @@ sub _get_next_token {
         return ('Bang',   $lexeme) if $lexeme eq '!';
 
         return ('ASSIGNMENT_WORD', $lexeme) if ($lexeme =~ /^[A-Za-z0-9]+=/);
+
+        $self->{state} = STATE_COMMAND;
+        return ('WORD', $lexeme);
+    } elsif ($self->{state} == STATE_COMMAND) {
+        $self->{state} = STATE_COMMAND;
+        return ('WORD', $lexeme);
+    } elsif ($self->{state} == STATE_WAIT_NAME) {
+        $self->{state} = STATE_NORMAL;
+        return ('WORD', $lexeme);
+    } elsif ($self->{state} == STATE_CASE_WAIT_WORD) {
+        $self->{state} = STATE_CASE_WAIT_IN;
+        return ('WORD', $lexeme);
+    } elsif ($self->{state} == STATE_CASE_WAIT_IN) {
+        if ($lexeme ne 'in') {
+            die "Expected 'in', got '$lexeme'";
+        }
+        $self->{state} = STATE_CASE_WAIT_PATTERN;
+        return ('In', $lexeme);
+    } elsif ($self->{state} == STATE_CASE_WAIT_PATTERN) {
+        if ($lexeme eq 'esac') {
+            $self->{state} = STATE_NORMAL;
+            return ('Esac', $lexeme);
+        }
+        return ('WORD', $lexeme);
+    } else {
+        die "Unexpected state: $self->{state}";
     }
 
-    $self->{downgrade_assignment_word} = 1;
-
-    return ('WORD', $lexeme);
+    die "Unreachable code";
 }
 
 1;
