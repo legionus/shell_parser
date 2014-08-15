@@ -18,7 +18,6 @@ use ShellParser::Token::Word;
 
 %token  WORD
 %token  ASSIGNMENT_WORD
-%token  NAME
 %token  NEWLINE
 %token  IO_NUMBER
 
@@ -115,7 +114,7 @@ for_clause       : For name linebreak                            do_group
                  | For name linebreak in wordlist sequential_sep do_group
                  { ShellParser::Token::For->new($_[2], $_[5], $_[7]) }
                  ;
-name             : NAME                     /* Apply rule 5 */
+name             : WORD                     /* Apply rule 5 */
                  ;
 in               : In                       /* Apply rule 6 */
                  ;
@@ -174,7 +173,7 @@ function_body    : compound_command                /* Apply rule 9 */
                  | compound_command redirect_list  /* Apply rule 9 */
                  { {'body' => $_[1], 'redirect' => $_[2]} }
                  ;
-fname            : NAME                            /* Apply rule 8 */
+fname            : WORD                            /* Apply rule 8 */
                  ;
 brace_group      : Lbrace compound_list Rbrace
                  { ShellParser::Token::BraceGroup->new($_[2]) }

@@ -37,8 +37,8 @@ sub new {
     my $self = {
         state => {},
         reader => $reader,
-        prev_token => '',
-        inject => undef,
+        for_state => 0,
+        case_state => 0,
         downgrade_assignment_word => 0,
     };
     return bless($self, $class);
@@ -159,7 +159,6 @@ sub _get_rest_db_string
                 $value .= $1 . $self->_get_rest_dbb_string();
             }
         }
-        print "word: $value\n";
     }
 
     $self->{current_line} = $self->{reader}->('token', '$(');
@@ -201,7 +200,6 @@ sub _get_word {
         } else {
             $value .= $c;
         }
-        print "word: $value\n";
     }
 
     return $value;
@@ -215,15 +213,6 @@ sub _get_next_token {
     }
     if (!defined($self->{current_line})) {
         return ('', undef);
-    }
-
-    my $prev_token = $self->{prev_token};
-    $self->{prev_token} = '';
-
-    my $inject = $self->{inject};
-    $self->{inject} = undef;
-    if ($inject) {
-        return @$inject;
     }
 
     my $target = \$self->{current_line};
@@ -240,31 +229,49 @@ sub _get_next_token {
         redo if $$target =~ /\G \s+ /gcx;
 
         foreach my $op (keys %operators) {
-            return ($operators{$op}, $1) if $$target =~ /\G (\Q$op\E) /gcx;
+            if ($$target =~ /\G (\Q$op\E) /gcx) {
+                if ($op eq ';;') {
+                    $self->{case_state} = 3;
+                }
+                return ($operators{$op}, $1);
+            }
         }
 
         my $word = $self->_get_word();
-        # if ($$target =~ /\G ([A-Za-z0-9\$\"'=]+) /gcx) {
         if (defined($word)) {
             redo if $word eq "";
 
-            # my $word = $1;
-            if ($prev_token eq 'For') {
-                return ('NAME', $word);
+            if ($self->{for_state}) {
+                $self->{for_state} = 0;
+                return ('WORD', $word);
             }
-            if ($$target =~ /\G \ * (\() /gcx) {
-                $self->{inject} = ['(', $1];
-                return ('NAME', $word);
+            if ($self->{case_state} == 1) {
+                $self->{case_state} = 2;
+                return ('WORD', $word);
+            }
+            if ($self->{case_state} == 3) {
+                if ($word eq 'esac') {
+                    $self->{case_state} = 0;
+                    return ('Esac', $word);
+                }
+                return ('WORD', $word);
             }
 
             if (!$self->{downgrade_assignment_word}) {
-                if ($word eq 'for') {
-                    $self->{prev_token} = 'For';
-                    return ('For', $1);
-                }
                 foreach my $w (@reserved_words) {
                     if ($word eq $w) {
-                        return (uc(substr($w, 0, 1)) . substr($w, 1), $1);
+                        if ($w eq 'for') {
+                            $self->{for_state} = 1;
+                        } elsif ($w eq 'case') {
+                            $self->{case_state} = 1;
+                        } elsif ($w eq 'in') {
+                            if ($self->{case_state} == 2) {
+                                $self->{case_state} = 3;
+                            }
+                        } elsif ($w eq 'esac') {
+                            die "unexpected esac";
+                        }
+                        return (uc(substr($w, 0, 1)) . substr($w, 1), $w);
                     }
                 }
 
@@ -282,6 +289,10 @@ sub _get_next_token {
         }
 
         $self->{downgrade_assignment_word} = 0;
+        if ($self->{case_state} == 3 && $$target =~ /\G (\)) /gcx) {
+            $self->{case_state} = 0;
+            return ($1, $1);
+        }
         return ($1, $1)       if $$target =~ /\G ([<>()|;&]) /gcx;
 
         return ('UNKNOWN', $1) if $$target =~ /\G (.) /gcx;
