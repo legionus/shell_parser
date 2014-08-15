@@ -16,8 +16,8 @@ sub new {
 
 sub print {
     my ($self, $sep, $depth) = @_;
-    print $sep x $depth . "Command(name=...)\n";
-    print $sep x $depth . $sep . "Command::suffix()\n";
+    print $sep x $depth . "Command(name=$self->{name})\n";
+    print $sep x $depth . $sep . "Command::arguments()\n";
     foreach my $elem (@{$self->{args}}) {
         $elem->print($sep, $depth + 2);
     }
