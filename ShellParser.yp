@@ -262,7 +262,7 @@ sequential_sep   : ';' linebreak
 
 %%
 
-use Lexer;
+use Tokenizer;
 
 sub _Error {
     my ($parser) = shift;
@@ -285,7 +285,7 @@ sub _Lexer {
 
 sub parse {
     my ($self, $filehandle) = @_;
-    $self->YYData->{LEXER} = Lexer->new(sub {
+    $self->YYData->{LEXER} = Tokenizer->new(sub {
         return scalar <$filehandle>;
     });
     $self->YYParse(yylex => \&_Lexer, yyerror => \&_Error, yydebug => 0x1f);

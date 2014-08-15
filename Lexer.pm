@@ -3,43 +3,24 @@ package Lexer;
 use strict;
 use warnings;
 
-my @reserved_words = qw(
-    while
-    until
-    then
-    in
-    if
-    for
-    fi
-    esac
-    else
-    elif
-    done
-    do
-    case
-);
-
-my %operators = (
-    '&&'  => 'AND_IF',
-    '||'  => 'OR_IF',
-    ';;'  => 'DSEMI',
-    '<<'  => 'DLESS',
-    '>>'  => 'DGREAT',
-    '<&'  => 'LESSAND',
-    '>&'  => 'GREATAND',
-    '<>'  => 'LESSGREAT',
-    '<<-' => 'DLESSDASH',
-    '>|'  => 'CLOBBER',
+my @operators = qw(
+    &&
+    ||
+    ;;
+    <<
+    >>
+    <&
+    >&
+    <>
+    <<-
+    >|
 );
 
 sub new {
     my ($class, $reader) = @_;
     my $self = {
-        state => {},
         reader => $reader,
-        for_state => 0,
-        case_state => 0,
-        downgrade_assignment_word => 0,
+        lookahead_value => undef,
     };
     return bless($self, $class);
 }
@@ -141,7 +122,7 @@ sub _get_rest_db_string
     while ($$target =~ /\G (.) /gcx) {
         my $c = $1;
         $value .= $c;
-        if ($c != /[^\s<>()|;&]/) {
+        if ($c =~ /[^\s<>()|;&]/) {
             my $word = $self->_get_word();
             next if !defined($word);
             $value .= $word;
@@ -191,7 +172,7 @@ sub _get_word {
             }
         } elsif ($c eq '\\') {
             if ($$target =~ /\G (.) /gcx) {
-                $value .= $1;
+                $value .= $c . $1;
             } else {
                 $self->{current_line} = $self->{reader}->('token', '\\');
                 die "Unexpected end of input" if !defined($self->{current_line});
@@ -205,100 +186,35 @@ sub _get_word {
     return $value;
 }
 
-sub _get_next_token {
+sub get_next_lexem {
     my ($self) = @_;
 
     if (!defined($self->{current_line})) {
         $self->{current_line} = $self->{reader}->('new');
     }
     if (!defined($self->{current_line})) {
-        return ('', undef);
+        return undef;
     }
 
     my $target = \$self->{current_line};
-    print "target: $$target\n";
     TOKEN: {
-        if ($$target =~ /\G \n /gcx) {
-            $self->{downgrade_assignment_word} = 0;
-            return ('NEWLINE', '');
-        }
-        if ($$target =~ /\G (\#.*) /gcx) {
-            $self->{downgrade_assignment_word} = 0;
-            return ('NEWLINE', $1);
-        }
-        redo if $$target =~ /\G \s+ /gcx;
+        return $1 if $$target =~ /\G (\n)   /gcx;
+        return $1 if $$target =~ /\G (\#.*) /gcx;
+        return $1 if $$target =~ /\G (\s+)  /gcx;
 
-        foreach my $op (keys %operators) {
-            if ($$target =~ /\G (\Q$op\E) /gcx) {
-                if ($op eq ';;') {
-                    $self->{case_state} = 3;
-                }
-                return ($operators{$op}, $1);
-            }
+        foreach my $q (@operators) {
+            return $1 if ($$target =~ /\G (\Q$q\E) /gcx);
         }
 
         my $word = $self->_get_word();
         if (defined($word)) {
-            redo if $word eq "";
-
-            if ($self->{for_state}) {
-                $self->{for_state} = 0;
-                return ('WORD', $word);
-            }
-            if ($self->{case_state} == 1) {
-                $self->{case_state} = 2;
-                return ('WORD', $word);
-            }
-            if ($self->{case_state} == 3) {
-                if ($word eq 'esac') {
-                    $self->{case_state} = 0;
-                    return ('Esac', $word);
-                }
-                return ('WORD', $word);
-            }
-
-            if (!$self->{downgrade_assignment_word}) {
-                foreach my $w (@reserved_words) {
-                    if ($word eq $w) {
-                        if ($w eq 'for') {
-                            $self->{for_state} = 1;
-                        } elsif ($w eq 'case') {
-                            $self->{case_state} = 1;
-                        } elsif ($w eq 'in') {
-                            if ($self->{case_state} == 2) {
-                                $self->{case_state} = 3;
-                            }
-                        } elsif ($w eq 'esac') {
-                            die "unexpected esac";
-                        }
-                        return (uc(substr($w, 0, 1)) . substr($w, 1), $w);
-                    }
-                }
-
-                return ('Lbrace', $word) if $word eq '{';
-                return ('Rbrace', $word) if $word eq '}';
-                return ('Bang',   $word) if $word eq '!';
-
-                return ('ASSIGNMENT_WORD', $word) if ($word =~ /^[A-Za-z0-9]+=/);
-            }
-
-            $self->{downgrade_assignment_word} = 1;
-
-            return ('WORD', $word);
-            return ('UNKNOWN_WORD', $word);
+            return $word;
         }
 
-        $self->{downgrade_assignment_word} = 0;
-        if ($self->{case_state} == 3 && $$target =~ /\G (\)) /gcx) {
-            $self->{case_state} = 0;
-            return ($1, $1);
-        }
-        return ($1, $1)       if $$target =~ /\G ([<>()|;&]) /gcx;
-
-        return ('UNKNOWN', $1) if $$target =~ /\G (.) /gcx;
+        return ($1, $1) if $$target =~ /\G (.) /gcx;
 
         $self->{current_line} = undef;
-        return $self->_get_next_token();
+        return $self->get_next_lexem();
     }
 }
 
