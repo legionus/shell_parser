@@ -13,4 +13,9 @@ sub new {
     }, $class);
 }
 
+sub print {
+    my ($self, $sep, $depth) = @_;
+    print $sep x $depth . "Redirection($self->{redirection}, $self->{filename})\n";
+}
+
 1;
