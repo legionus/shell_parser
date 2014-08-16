@@ -20,7 +20,6 @@ sub new {
     my ($class, $reader) = @_;
     my $self = {
         reader => $reader,
-        lookahead_value => undef,
     };
     return bless($self, $class);
 }
@@ -198,6 +197,15 @@ sub get_next_lexeme {
 
         $self->{current_line} = undef;
         return $self->get_next_lexeme();
+    }
+}
+
+sub lookahead {
+    my ($self) = @_;
+    if ($self->{current_line} =~ /\G \s*(.) /x) {
+        return $1;
+    } else {
+        return '';
     }
 }
 
