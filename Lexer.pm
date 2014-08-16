@@ -182,7 +182,7 @@ sub get_next_lexeme {
     TOKEN: {
         return $1 if $$target =~ /\G (\n)   /gcx;
         return $1 if $$target =~ /\G (\#.*) /gcx;
-        return $1 if $$target =~ /\G (\s+)  /gcx;
+        return $1 if $$target =~ /\G ([ \t]+)  /gcx;
 
         foreach my $q (@operators) {
             return $1 if ($$target =~ /\G (\Q$q\E) /gcx);
