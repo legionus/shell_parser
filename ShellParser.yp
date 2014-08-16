@@ -3,7 +3,6 @@ use ShellParser::Token::AndOrList;
 use ShellParser::Token::BraceGroup;
 use ShellParser::Token::Case;
 use ShellParser::Token::CaseItem;
-use ShellParser::Token::Command;
 use ShellParser::Token::DoGroup;
 use ShellParser::Token::For;
 use ShellParser::Token::FuncDef;
@@ -11,6 +10,7 @@ use ShellParser::Token::If;
 use ShellParser::Token::List;
 use ShellParser::Token::Pipeline;
 use ShellParser::Token::Redirection;
+use ShellParser::Token::SimpleCommand;
 use ShellParser::Token::SubShell;
 use ShellParser::Token::Until;
 use ShellParser::Token::While;
@@ -203,15 +203,15 @@ do_group         : Do compound_list Done           /* Apply rule 6 */
                  { ShellParser::Token::DoGroup->new($_[2]) }
                  ;
 simple_command   : cmd_prefix cmd_word cmd_suffix
-                 { ShellParser::Token::Command->new($_[1], $_[2], $_[3]) }
+                 { ShellParser::Token::SimpleCommand->new($_[1], $_[2], $_[3]) }
                  | cmd_prefix cmd_word
-                 { ShellParser::Token::Command->new($_[1], $_[2], []) }
+                 { ShellParser::Token::SimpleCommand->new($_[1], $_[2], []) }
                  | cmd_prefix
-                 { ShellParser::Token::Command->new($_[1], undef, []) }
+                 { ShellParser::Token::SimpleCommand->new($_[1], undef, []) }
                  | cmd_name cmd_suffix
-                 { ShellParser::Token::Command->new([], $_[1], $_[2]) }
+                 { ShellParser::Token::SimpleCommand->new([], $_[1], $_[2]) }
                  | cmd_name
-                 { ShellParser::Token::Command->new([], $_[1], []) }
+                 { ShellParser::Token::SimpleCommand->new([], $_[1], []) }
                  ;
 cmd_name         : WORD                   /* Apply rule 7a */
                  { ShellParser::Token::Word->new($_[1]) }

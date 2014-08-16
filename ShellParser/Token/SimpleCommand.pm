@@ -1,4 +1,4 @@
-package ShellParser::Token::Command;
+package ShellParser::Token::SimpleCommand;
 
 use strict;
 use warnings;
