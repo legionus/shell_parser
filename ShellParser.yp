@@ -149,7 +149,7 @@ case_item_ns     :     pattern ')'               linebreak
                  | '(' pattern ')'               linebreak
                  { ShellParser::Token::CaseItem->new($_[1], $_[2], undef, undef) }
                  | '(' pattern ')' compound_list linebreak
-                 { ShellParser::Token::CaseItem->new($_[1], $_[2], $_[3], undef) }
+                 { ShellParser::Token::CaseItem->new($_[1], $_[2], $_[4], undef) }
                  ;
 case_item        :     pattern ')' linebreak     DSEMI linebreak
                  { ShellParser::Token::CaseItem->new(undef, $_[1], undef, $_[4]) }
@@ -158,7 +158,7 @@ case_item        :     pattern ')' linebreak     DSEMI linebreak
                  | '(' pattern ')' linebreak     DSEMI linebreak
                  { ShellParser::Token::CaseItem->new($_[1], $_[2], undef, $_[5]) }
                  | '(' pattern ')' compound_list DSEMI linebreak
-                 { ShellParser::Token::CaseItem->new($_[1], $_[2], $_[3], $_[5]) }
+                 { ShellParser::Token::CaseItem->new($_[1], $_[2], $_[4], $_[5]) }
                  ;
 pattern          :             WORD         /* Apply rule 4 */
                  { [ShellParser::Token::Word->new($_[1])] }
