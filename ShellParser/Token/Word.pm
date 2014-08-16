@@ -1,5 +1,10 @@
 package ShellParser::Token::Word;
 
+use strict;
+use warnings;
+
+use base 'ShellParser::Token';
+
 sub new {
     my ($class, $value) = @_;
     return bless({
@@ -8,13 +13,13 @@ sub new {
 }
 
 sub print {
-    my ($self, $sep, $depth) = @_;
+    my $self = shift;
     my $v = $self->{value};
     $v =~ s/</<LESS>/g;
     $v =~ s/>/<GREATER>/g;
     $v =~ s/\\/<SLASH>/g;
     $v =~ s/\n/<NEWLINE>/g;
-    print $sep x $depth . "Word($v)\n";
+    $self->_p_head($v, @_);
 }
 
 1;

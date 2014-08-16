@@ -13,6 +13,6 @@ my $result = $p->parse($fh);
 if (!$result) {
     print $p->error;
 } else {
-    $result->print("  ", 0);
+    $result->print(".   ", 0);
 }
 close($fh);

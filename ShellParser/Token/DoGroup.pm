@@ -13,8 +13,10 @@ sub new {
 }
 
 sub print {
-    my ($self, $sep, $depth) = @_;
-    print $sep x $depth . "DoGroup()\n";
+    my $self = shift;
+    $self->_p_head("", @_);
+
+    my ($sep, $depth) = @_;
     $self->{body}->print($sep, $depth + 1);
 }
 

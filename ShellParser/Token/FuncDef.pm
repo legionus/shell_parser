@@ -15,15 +15,15 @@ sub new {
 }
 
 sub print {
-    my ($self, $sep, $depth) = @_;
-    print $sep x $depth . "FuncDef(name=$self->{name})\n";
-    print $sep x $depth . $sep . "FuncDef::body()\n";
-    $self->{body}->print($sep, $depth + 2);
+    my $self = shift;
+    $self->_p_head("name=$self->{name}", @_);
+
+    my ($sep, $depth) = @_;
+    $self->{body}->print($sep, $depth + 1, "body");
     if ($self->{redirect}) {
-    	print $sep x $depth . $sep . "FuncDef::redirect()\n";
-    	foreach my $redirect (@{$self->{redirect}}) {
-		    $redirect->print($sep, $depth + 2);
-    	}
+        foreach my $redirect (@{$self->{redirect}}) {
+            $redirect->print($sep, $depth + 1, "redirect");
+        }
     }
 }
 

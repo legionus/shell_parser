@@ -20,17 +20,17 @@ sub append {
 }
 
 sub print {
-    my ($self, $sep, $depth) = @_;
-    print $sep x $depth . "If()\n";
+    my $self = shift;
+    $self->_p_head("", @_);
+
+    my ($sep, $depth) = @_;
     foreach my $elem (@{$self->{body}}) {
         if (defined($elem->{condition})) {
-            print $sep x $depth . $sep . "If::condition()\n";
-            $elem->{condition}->print($sep, $depth + 2);
+            $elem->{condition}->print($sep, $depth + 1, "condition");
+            $elem->{body}->print($sep, $depth + 1, "then");
         } else {
-            print $sep x $depth . $sep . "If::else()\n";
+            $elem->{body}->print($sep, $depth + 1, "else");
         }
-        print $sep x $depth . $sep . "If::then()\n";
-        $elem->{body}->print($sep, $depth + 2);
     }
 }
 

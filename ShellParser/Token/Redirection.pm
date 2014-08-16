@@ -14,8 +14,8 @@ sub new {
 }
 
 sub print {
-    my ($self, $sep, $depth) = @_;
-    print $sep x $depth . "Redirection($self->{redirection}, $self->{filename})\n";
+    my $self = shift;
+    $self->_p_head("$self->{redirection} $self->{filename}", @_);
 }
 
 1;

@@ -13,4 +13,13 @@ sub new {
     }, $class);
 }
 
+sub print {
+    my $self = shift;
+    $self->_p_head("", @_);
+
+    my ($sep, $depth) = @_;
+    $self->{condition}->print($sep, $depth + 1, "condition");
+    $self->{body}->print($sep, $depth + 1, "body");
+}
+
 1;

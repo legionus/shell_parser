@@ -15,16 +15,16 @@ sub new {
 }
 
 sub print {
-    my ($self, $sep, $depth) = @_;
-    print $sep x $depth . "For(variable=$self->{variable})\n";
+    my $self = shift;
+    $self->_p_head("variable=$self->{variable}", @_);
+
+    my ($sep, $depth) = @_;
     if ($self->{words}) {
-        print $sep x $depth . $sep . "For::words()\n";
         foreach my $word (@{$self->{words}}) {
-            $word->print($sep, $depth + 2);
+            $word->print($sep, $depth + 1, "word");
         }
     }
-    print $sep x $depth . $sep . "For::body()\n";
-    $self->{body}->print($sep, $depth + 2);
+    $self->{body}->print($sep, $depth + 1, "body");
 }
 
 1;

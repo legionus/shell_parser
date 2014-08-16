@@ -19,8 +19,10 @@ sub append {
 }
 
 sub print {
-    my ($self, $sep, $depth) = @_;
-    print $sep x $depth . "Pipeline(banged=$self->{banged})\n";
+    my $self = shift;
+    $self->_p_head("banged=$self->{banged}", @_);
+
+    my ($sep, $depth) = @_;
     foreach my $elem (@{$self->{body}}) {
         $elem->print($sep, $depth + 1);
     }

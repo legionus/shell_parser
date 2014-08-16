@@ -18,8 +18,10 @@ sub append {
 }
 
 sub print {
-    my ($self, $sep, $depth) = @_;
-    print $sep x $depth . "List()\n";
+    my $self = shift;
+    $self->_p_head("", @_);
+
+    my ($sep, $depth) = @_;
     foreach my $elem (@{$self->{body}}) {
         $elem->print($sep, $depth + 1);
     }

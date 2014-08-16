@@ -6,20 +6,27 @@ use warnings;
 use base 'ShellParser::Token';
 
 sub new {
-    my ($class, $name, $args, $prefix) = @_;
+    my ($class, $prefix, $name, $args) = @_;
     return bless({
+        prefix => $prefix,
         name   => $name,
         args   => $args,
-        prefix => $prefix,
     }, $class);
 }
 
 sub print {
-    my ($self, $sep, $depth) = @_;
-    print $sep x $depth . "Command(name=$self->{name})\n";
-    print $sep x $depth . $sep . "Command::arguments()\n";
+    my $self = shift;
+    $self->_p_head("", @_);
+
+    my ($sep, $depth) = @_;
+    foreach my $elem (@{$self->{prefix}}) {
+        $elem->print($sep, $depth + 1, "prefix");
+    }
+    if (defined($self->{name})) {
+        $self->{name}->print($sep, $depth + 1, "name");
+    }
     foreach my $elem (@{$self->{args}}) {
-        $elem->print($sep, $depth + 2);
+        $elem->print($sep, $depth + 1, "argument");
     }
 }
 
