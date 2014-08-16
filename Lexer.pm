@@ -122,14 +122,13 @@ sub _get_rest_db_string
     while ($$target =~ /\G (.) /gcx) {
         my $c = $1;
         $value .= $c;
-        if ($c =~ /[^\s<>()|;&]/) {
-            my $word = $self->_get_word();
-            next if !defined($word);
+
+        my $word = $self->_get_word();
+        if (defined($word)) {
             $value .= $word;
         } elsif ($c eq ')') {
             return $value;
-        }
-        if ($c eq "'") {
+        } elsif ($c eq "'") {
             $value .= $self->_get_rest_q_string();
         } elsif ($c eq '"') {
             $value .= $self->_get_rest_qq_string();
