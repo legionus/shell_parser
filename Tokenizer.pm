@@ -102,8 +102,6 @@ sub _get_next_token {
                     $self->{state} = STATE_WAIT_NAME;
                 } elsif ($w eq 'case') {
                     $self->{state} = STATE_CASE_WAIT_WORD;
-                } elsif ($w eq 'esac') {
-                    die "unexpected esac";
                 }
                 return (uc(substr($w, 0, 1)) . substr($w, 1), $w);
             }
