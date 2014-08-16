@@ -119,25 +119,28 @@ sub _get_rest_db_string
 
     my $value = "";
 
-    while ($$target =~ /\G (.) /gcx) {
-        my $c = $1;
-        $value .= $c;
-
+    while (1) {
         my $word = $self->_get_word();
         if (defined($word)) {
             $value .= $word;
-        } elsif ($c eq ')') {
-            return $value;
-        } elsif ($c eq "'") {
-            $value .= $self->_get_rest_q_string();
-        } elsif ($c eq '"') {
-            $value .= $self->_get_rest_qq_string();
-        } elsif ($c eq '`') {
-            $value .= $self->_get_rest_qx_string();
-        } elsif ($c eq '$') {
-            if ($$target =~ /\G (\(\() /gcx) {
-                $value .= $1 . $self->_get_rest_dbb_string();
+        } elsif ($$target =~ /\G (.) /gcx) {
+            my $c = $1;
+            $value .= $c;
+            if ($c eq ')') {
+                return $value;
+            } elsif ($c eq "'") {
+                $value .= $self->_get_rest_q_string();
+            } elsif ($c eq '"') {
+                $value .= $self->_get_rest_qq_string();
+            } elsif ($c eq '`') {
+                $value .= $self->_get_rest_qx_string();
+            } elsif ($c eq '$') {
+                if ($$target =~ /\G (\(\() /gcx) {
+                    $value .= $1 . $self->_get_rest_dbb_string();
+                }
             }
+        } else {
+            last;
         }
     }
 
