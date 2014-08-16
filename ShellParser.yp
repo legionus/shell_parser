@@ -244,6 +244,7 @@ redirect_list    :               io_redirect
                  ;
 io_redirect      :           io_file
                  | IO_NUMBER io_file
+                 { $_[2]->{left} = $_[1]; $_[2] }
                  |           io_here
                  | IO_NUMBER io_here
                  ;

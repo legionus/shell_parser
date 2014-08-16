@@ -8,6 +8,7 @@ use base 'ShellParser::Token';
 sub new {
     my ($class, $op, $filename) = @_;
     return bless({
+        left        => undef,
         redirection => $op,
         filename    => $filename,
     }, $class);
@@ -15,7 +16,9 @@ sub new {
 
 sub print {
     my $self = shift;
-    $self->_p_head("$self->{redirection} $self->{filename}", @_);
+    my $args = "$self->{redirection} $self->{filename}";
+    $args = "$self->{left} $args" if defined($self->{left});
+    $self->_p_head($args, @_);
 }
 
 1;
