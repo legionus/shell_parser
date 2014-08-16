@@ -2,6 +2,7 @@
 use ShellParser::Token::AndOrList;
 use ShellParser::Token::Bang;
 use ShellParser::Token::BraceGroup;
+use ShellParser::Token::Case;
 use ShellParser::Token::Command;
 use ShellParser::Token::DoGroup;
 use ShellParser::Token::For;
@@ -15,6 +16,7 @@ use ShellParser::Token::Until;
 use ShellParser::Token::While;
 use ShellParser::Token::Word;
 %}
+
 
 %token  WORD
 %token  ASSIGNMENT_WORD
@@ -124,8 +126,11 @@ wordlist         : wordlist WORD
                  { [ShellParser::Token::Word->new($_[1])] }
                  ;
 case_clause      : Case WORD linebreak in linebreak case_list    Esac
+                 { ShellParser::Token::Case->new($_[2]) }
                  | Case WORD linebreak in linebreak case_list_ns Esac
+                 { ShellParser::Token::Case->new($_[2]) }
                  | Case WORD linebreak in linebreak              Esac
+                 { ShellParser::Token::Case->new($_[2]) }
                  ;
 case_list_ns     : case_list case_item_ns
                  |           case_item_ns
