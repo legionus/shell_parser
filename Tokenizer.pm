@@ -72,7 +72,7 @@ sub _get_next_token {
         }
         return ('NEWLINE', $lexeme);
     }
-    if ($lexeme =~ /^\s+$/) {
+    if ($lexeme =~ /^\s*$/) {
         return $self->_get_next_token();
     }
 
@@ -80,6 +80,11 @@ sub _get_next_token {
         if ($lexeme eq $op) {
             if ($op eq ';;') {
                 $self->{state} = STATE_CASE_WAIT_PATTERN;
+            }
+            if ($op eq '||' || $op eq '&&') {
+                if ($self->{state} eq STATE_COMMAND) {
+                    $self->{state} = STATE_NORMAL;
+                }
             }
             return ($operators{$op}, $lexeme);
         }
