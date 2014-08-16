@@ -63,8 +63,8 @@ sub _get_rest_qq_string {
         } elsif ($c eq '"') {
             return $value;
         } elsif ($c eq '$') {
-            if ($$target =~ /\G (\(\() /gcx) {
-                $value .= $1 . $self->_get_rest_dbb_string();
+            if ($$target =~ /\G (\() /gcx) {
+                $value .= $1 . $self->_get_rest_b_string();
             }
         }
     }
@@ -93,26 +93,7 @@ sub _get_rest_qx_string {
     return $value;
 }
 
-sub _get_rest_dbb_string
-{
-    my ($self) = @_;
-    my $target = \$self->{current_line};
-
-    my $value = "";
-
-    $$target =~ /\G (.*?\)\)|.*) /gcx;
-    $value = $1;
-    if ($value !~ /\)\)$/) {
-        # FIXME
-        $self->{current_line} = $self->{reader}->('token', '"');
-        die "Unexpected end of input" if !defined($self->{current_line});
-        $value .= "\n" . $self->_get_rest_dbb_string();
-    }
-
-    return $value;
-}
-
-sub _get_rest_db_string
+sub _get_rest_b_string
 {
     my ($self) = @_;
     my $target = \$self->{current_line};
@@ -135,9 +116,11 @@ sub _get_rest_db_string
             } elsif ($c eq '`') {
                 $value .= $self->_get_rest_qx_string();
             } elsif ($c eq '$') {
-                if ($$target =~ /\G (\(\() /gcx) {
-                    $value .= $1 . $self->_get_rest_dbb_string();
+                if ($$target =~ /\G (\() /gcx) {
+                    $value .= $1 . $self->_get_rest_b_string();
                 }
+            } elsif ($c eq '(') {
+                $value .= $self->_get_rest_b_string();
             }
         } else {
             last;
@@ -146,7 +129,7 @@ sub _get_rest_db_string
 
     $self->{current_line} = $self->{reader}->('token', '$(');
     die "Unexpected end of input" if !defined($self->{current_line});
-    $value .= "\n" . $self->_get_rest_db_string();
+    $value .= "\n" . $self->_get_rest_b_string();
     return $value;
 }
 
@@ -167,10 +150,8 @@ sub _get_word {
         } elsif ($c eq '`') {
             $value .= $c . $self->_get_rest_qx_string();
         } elsif ($c eq '$') {
-            if ($$target =~ /\G (\(\() /gcx) {
-                $value .= $c . $1 . $self->_get_rest_dbb_string();
-            } elsif ($$target =~ /\G (\() /gcx) {
-                $value .= $c . $1 . $self->_get_rest_db_string();
+            if ($$target =~ /\G (\() /gcx) {
+                $value .= $c . $1 . $self->_get_rest_b_string();
             }
         } elsif ($c eq '\\') {
             if ($$target =~ /\G (.) /gcx) {
