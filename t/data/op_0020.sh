@@ -4,6 +4,6 @@ END
 cat <<"$foo"
 line2
 $foo
-cat <<"E'N'D"
+cat <<"E'O'F"
 line3
-E'N'D
+E'O'F
