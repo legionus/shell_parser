@@ -52,6 +52,11 @@ sub new {
     return bless($self, $class);
 }
 
+sub got_heredoc {
+    my ($self, $delim, $accum_ref, $strip_tabs) = @_;
+    $self->{lexer}->got_heredoc($delim, $accum_ref, $strip_tabs);
+}
+
 sub _get_next_token {
     my ($self) = @_;
 

@@ -5,21 +5,22 @@ use warnings;
 
 my @operators = qw(
     &&
-    ||
     ;;
-    <<
+    ||
+    >&
+    >|
     >>
     <&
-    >&
     <>
     <<-
-    >|
+    <<
 );
 
 sub new {
     my ($class, $reader) = @_;
     my $self = {
         reader => $reader,
+        heredoc => [],
     };
     return bless($self, $class);
 }
@@ -168,10 +169,55 @@ sub _get_word {
     return $value;
 }
 
+sub _get_heredoc {
+    my ($self, $heredoc_desc) = @_;
+    my $delim = $heredoc_desc->{delim};
+    my $accum_ref = $heredoc_desc->{accum_ref};
+    my $strip_tabs = $heredoc_desc->{strip_tabs};
+
+    # FIXME
+    if ($delim =~ /^'(.*)'$/) {
+        $delim = $1;
+    } elsif ($delim =~ /^"(.*)"$/) {
+        $delim = $1;
+    }
+
+    while (1) {
+        my $line = $self->{reader}->('HEREDOC:' . $delim);
+        if (!defined($line)) {
+            die "Unexpected end of here-document ($delim)";
+        }
+        chomp($line);
+        if ($strip_tabs) {
+            $line =~ s/^\t+//;
+        }
+        if ($line eq $delim) {
+            return;
+        }
+        $accum_ref .= "$line\n";
+    }
+}
+
+sub got_heredoc {
+    my ($self, $delim, $accum_ref, $strip_tabs) = @_;
+    push(
+        @{$self->{heredoc}},
+        {
+            delim => $delim,
+            accum_ref => $accum_ref,
+            strip_tabs => $strip_tabs,
+        }
+    );
+}
+
 sub get_next_lexeme {
     my ($self) = @_;
 
     if (!defined($self->{current_line})) {
+        while (@{$self->{heredoc}} != 0) {
+            my $heredoc_desc = shift(@{$self->{heredoc}});
+            $self->_get_heredoc($heredoc_desc);
+        }
         $self->{current_line} = $self->{reader}->('new');
     }
     if (!defined($self->{current_line})) {
