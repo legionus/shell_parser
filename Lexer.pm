@@ -25,6 +25,21 @@ sub new {
     return bless($self, $class);
 }
 
+sub _get_rest_variable {
+    my ($self) = @_;
+    my $target = \$self->{current_line};
+
+    my $value = "";
+    if ($$target =~ /\G (\() /gcx) {
+        $value .= $1;
+        $value .= $self->_get_rest_b_string();
+    } elsif ($$target =~ /\G ({) /gcx) {
+        $value .= $1;
+        $value .= $self->_get_rest_c_string();
+    }
+    return $value;
+}
+
 sub _get_rest_q_string {
     my ($self) = @_;
     my $target = \$self->{current_line};
@@ -43,7 +58,6 @@ sub _get_rest_q_string {
     }
 
     die "Unreachable code";
-
 }
 
 sub _get_rest_qq_string {
@@ -51,35 +65,32 @@ sub _get_rest_qq_string {
     my $target = \$self->{current_line};
 
     my $value = "";
-    while ($$target =~ /\G (.) /gcx) {
-        my $c = $1;
-        $value .= $c;
-        if ($c eq '\\') {
-            if ($$target =~ /\G (.) /gcx) {
-                $value .= $1;
-            } else {
-                $value .= "\n";
-                $self->{current_line} = $self->{reader}->('token', '"');
-                die "Unexpected end of input" if !defined($self->{current_line});
-                $target = \$self->{current_line};
+    while (1) {
+        if ($$target =~ /\G (.) /gcx) {
+            my $c = $1;
+            $value .= $c;
+
+            if ($c eq '"') {
+                return $value;
+            } elsif ($c eq '$') {
+                $value .= $self->_get_rest_variable();
+            } elsif ($c eq '\\') {
+                if ($$target =~ /\G (.) /gcx) {
+                    $value .= $1;
+                } else {
+                    $self->{current_line} = $self->{reader}->('token', '"');
+                    die "Unexpected end of input while scanning \"...\" string" if !defined($self->{current_line});
+                    $value .= "\n";
+                }
             }
-        } elsif ($c eq '"') {
-            return $value;
-        } elsif ($c eq '$') {
-            if ($$target =~ /\G (\() /gcx) {
-                $value .= $1;
-                $value .= $self->_get_rest_b_string();
-            } elsif ($$target =~ /\G ({) /gcx) {
-                $value .= $1;
-                $value .= $self->_get_rest_c_string();
-            }
+        } else {
+            $self->{current_line} = $self->{reader}->('token', '"');
+            die "Unexpected end of input while scanning \"...\" string" if !defined($self->{current_line});
+            $value .= "\n";
         }
     }
 
-    $self->{current_line} = $self->{reader}->('token', '"');
-    die "Unexpected end of input" if !defined($self->{current_line});
-    $value .= "\n" . $self->_get_rest_qq_string();
-    return $value;
+    die "Unreachable code";
 }
 
 sub _get_rest_qx_string {
@@ -107,40 +118,41 @@ sub _get_rest_c_string {
     my $target = \$self->{current_line};
 
     my $value = "";
-    while ($$target =~ /\G (.) /gcx) {
-        my $c = $1;
-        $value .= $c;
-        if ($c eq '\\') {
-            if ($$target =~ /\G (.) /gcx) {
-                $value .= $1;
-            } else {
-                $value .= "\n";
-                $self->{current_line} = $self->{reader}->('token', '"');
-                die "Unexpected end of input" if !defined($self->{current_line});
-                $target = \$self->{current_line};
+    while (1) {
+        if ($$target =~ /\G (.) /gcx) {
+            my $c = $1;
+            $value .= $c;
+
+            if ($c eq '}') {
+                return $value;
+            } elsif ($c eq "'") {
+                $value .= $self->_get_rest_q_string();
+            } elsif ($c eq '"') {
+                $value .= $self->_get_rest_qq_string();
+            } elsif ($c eq '\\') {
+                if ($$target =~ /\G (.) /gcx) {
+                    $value .= $1;
+                } else {
+                    $self->{current_line} = $self->{reader}->('token', '${');
+                    die "Unexpected end of input while scanning \${...} string" if !defined($self->{current_line});
+                    $value .= "\n";
+                }
             }
-        } elsif ($c eq '}') {
-            return $value;
-        } elsif ($c eq "'") {
-            $value .= $self->_get_rest_q_string();
-        } elsif ($c eq '"') {
-            $value .= $self->_get_rest_qq_string();
+        } else {
+            $self->{current_line} = $self->{reader}->('token', '${');
+            die "Unexpected end of input while scanning \${...} string" if !defined($self->{current_line});
+            $value .= "\n";
         }
     }
 
-    $self->{current_line} = $self->{reader}->('token', '"');
-    die "Unexpected end of input" if !defined($self->{current_line});
-    $value .= "\n" . $self->_get_rest_qq_string();
-    return $value;
+    die "Unreachable code";
 }
 
-sub _get_rest_b_string
-{
+sub _get_rest_b_string {
     my ($self) = @_;
     my $target = \$self->{current_line};
 
     my $value = "";
-
     while (1) {
         my $word = $self->_get_word();
         if (defined($word)) {
@@ -148,6 +160,7 @@ sub _get_rest_b_string
         } elsif ($$target =~ /\G (.) /gcx) {
             my $c = $1;
             $value .= $c;
+
             if ($c eq ')') {
                 return $value;
             } elsif ($c eq "'") {
@@ -157,25 +170,18 @@ sub _get_rest_b_string
             } elsif ($c eq '`') {
                 $value .= $self->_get_rest_qx_string();
             } elsif ($c eq '$') {
-                if ($$target =~ /\G (\() /gcx) {
-                    $value .= $1;
-                    $value .= $self->_get_rest_b_string();
-                } elsif ($$target =~ /\G ({) /gcx) {
-                    $value .= $1;
-                    $value .= $self->_get_rest_c_string();
-                }
+                $value .= $self->_get_rest_variable();
             } elsif ($c eq '(') {
                 $value .= $self->_get_rest_b_string();
             }
         } else {
-            last;
+            $self->{current_line} = $self->{reader}->('token', '$(');
+            die "Unexpected end of input while scanning \$(...) string" if !defined($self->{current_line});
+            $value .= "\n";
         }
     }
 
-    $self->{current_line} = $self->{reader}->('token', '$(');
-    die "Unexpected end of input" if !defined($self->{current_line});
-    $value .= "\n" . $self->_get_rest_b_string();
-    return $value;
+    die "Unreachable code";
 }
 
 sub _get_word {
@@ -195,15 +201,7 @@ sub _get_word {
         } elsif ($c eq '`') {
             $value .= $c . $self->_get_rest_qx_string();
         } elsif ($c eq '$') {
-            if ($$target =~ /\G (\() /gcx) {
-                $value .= $c . $1;
-                $value .= $self->_get_rest_b_string();
-            } elsif ($$target =~ /\G ({) /gcx) {
-                $value .= $c . $1;
-                $value .= $self->_get_rest_c_string();
-            } else {
-                $value .= $c;
-            }
+            $value .= $c . $self->_get_rest_variable();
         } elsif ($c eq '\\') {
             if ($$target =~ /\G (.) /gcx) {
                 $value .= $c . $1;
