@@ -1,0 +1,6 @@
+List()
+.   AndOrList(sep=)
+.   .   first: Pipeline(banged=0)
+.   .   .   SimpleCommand()
+.   .   .   .   name: Word(echo)
+.   .   .   .   argument: Word(`echo hello<NEWLINE>echo world`)

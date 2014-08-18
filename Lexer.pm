@@ -83,10 +83,9 @@ sub _get_rest_qx_string {
     my $target = \$self->{current_line};
 
     my $value = "";
-
     while (1) {
         $$target =~ /\G ([^`]*`|.*) /gcx;
-        $value = $1;
+        $value .= $1;
         if ($value =~ /`$/) {
             return $value;
         }
