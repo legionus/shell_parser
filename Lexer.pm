@@ -30,16 +30,20 @@ sub _get_rest_q_string {
     my $target = \$self->{current_line};
 
     my $value = "";
+    while (1) {
+        $$target =~ /\G ([^']*'|.*) /gcx;
+        $value .= $1;
+        if ($value =~ /'$/) {
+            return $value;
+        }
 
-    $$target =~ /\G ([^']*'|.*) /gcx;
-    $value = $1;
-    if ($value !~ /'$/) {
         $self->{current_line} = $self->{reader}->('token', "'");
-        die "Unexpected end of input" if !defined($self->{current_line});
-        $value .= "\n" . $self->_get_rest_q_string();
+        die "Unexpected end of input while scanning '...' string" if !defined($self->{current_line});
+        $value .= "\n";
     }
 
-    return $value;
+    die "Unreachable code";
+
 }
 
 sub _get_rest_qq_string {
@@ -90,9 +94,8 @@ sub _get_rest_qx_string {
             return $value;
         }
 
-        # FIXME: handle \", etc.
         $self->{current_line} = $self->{reader}->('token', '`');
-        die "Unexpected end of input" if !defined($self->{current_line});
+        die "Unexpected end of input while scanning `...` string" if !defined($self->{current_line});
         $value .= "\n";
     }
 
