@@ -47,7 +47,6 @@ sub _get_rest_qq_string {
     my $target = \$self->{current_line};
 
     my $value = "";
-
     while ($$target =~ /\G (.) /gcx) {
         my $c = $1;
         $value .= $c;
@@ -102,16 +101,30 @@ sub _get_rest_c_string {
     my $target = \$self->{current_line};
 
     my $value = "";
-
-    $$target =~ /\G ([^}]*}|.*) /gcx;
-    $value = $1;
-    if ($value !~ /}$/) {
-        # FIXME: ???
-        $self->{current_line} = $self->{reader}->('token', '}');
-        die "Unexpected end of input" if !defined($self->{current_line});
-        $value .= "\n" . $self->_get_rest_c_string();
+    while ($$target =~ /\G (.) /gcx) {
+        my $c = $1;
+        $value .= $c;
+        if ($c eq '\\') {
+            if ($$target =~ /\G (.) /gcx) {
+                $value .= $1;
+            } else {
+                $value .= "\n";
+                $self->{current_line} = $self->{reader}->('token', '"');
+                die "Unexpected end of input" if !defined($self->{current_line});
+                $target = \$self->{current_line};
+            }
+        } elsif ($c eq '}') {
+            return $value;
+        } elsif ($c eq "'") {
+            $value .= $self->_get_rest_q_string();
+        } elsif ($c eq '"') {
+            $value .= $self->_get_rest_qq_string();
+        }
     }
 
+    $self->{current_line} = $self->{reader}->('token', '"');
+    die "Unexpected end of input" if !defined($self->{current_line});
+    $value .= "\n" . $self->_get_rest_qq_string();
     return $value;
 }
 
