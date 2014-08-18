@@ -325,11 +325,11 @@ sub parse {
 sub error {
     my ($parser) = shift;
 
-    #my $target = \$parser->YYData->{INPUT};
+    my $current_line = $parser->YYData->{LEXER}->{lexer}->{current_line};
     my $message = $parser->YYData->{ERR_MSG};
     #my $position = $parser->YYData->{ERR_POS};
     #return "$$target\n" .
     #    ("-" x ($position - 1)) . "^\n$message\n";
-    return "$message\n";
+    return ($current_line ? "$current_line\n" : "") . "$message\n";
 }
 
