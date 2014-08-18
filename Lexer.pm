@@ -63,7 +63,11 @@ sub _get_rest_qq_string {
             return $value;
         } elsif ($c eq '$') {
             if ($$target =~ /\G (\() /gcx) {
-                $value .= $1 . $self->_get_rest_b_string();
+                $value .= $1;
+                $value .= $self->_get_rest_b_string();
+            } elsif ($$target =~ /\G ({) /gcx) {
+                $value .= $1;
+                $value .= $self->_get_rest_c_string();
             }
         }
     }
@@ -152,9 +156,11 @@ sub _get_rest_b_string
                 $value .= $self->_get_rest_qx_string();
             } elsif ($c eq '$') {
                 if ($$target =~ /\G (\() /gcx) {
-                    $value .= $1 . $self->_get_rest_b_string();
+                    $value .= $1;
+                    $value .= $self->_get_rest_b_string();
                 } elsif ($$target =~ /\G ({) /gcx) {
-                    $value .= $1 . $self->_get_rest_c_string();
+                    $value .= $1;
+                    $value .= $self->_get_rest_c_string();
                 }
             } elsif ($c eq '(') {
                 $value .= $self->_get_rest_b_string();
@@ -188,9 +194,11 @@ sub _get_word {
             $value .= $c . $self->_get_rest_qx_string();
         } elsif ($c eq '$') {
             if ($$target =~ /\G (\() /gcx) {
-                $value .= $c . $1 . $self->_get_rest_b_string();
+                $value .= $c . $1;
+                $value .= $self->_get_rest_b_string();
             } elsif ($$target =~ /\G ({) /gcx) {
-                $value .= $c . $1 . $self->_get_rest_c_string();
+                $value .= $c . $1;
+                $value .= $self->_get_rest_c_string();
             } else {
                 $value .= $c;
             }
