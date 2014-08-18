@@ -1,0 +1,5 @@
+List()
+.   AndOrList(sep=)
+.   .   first: Pipeline(banged=0)
+.   .   .   SimpleCommand()
+.   .   .   .   prefix: Word(r="${r:+"$r "}${l%$m}")
