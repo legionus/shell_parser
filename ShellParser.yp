@@ -267,6 +267,7 @@ io_file          : '<'       filename
                  { ShellParser::Token::Redirection->new($_[1], $_[2]) }
                  ;
 filename         : WORD                      /* Apply rule 2 */
+                 | IO_NUMBER
                  ;
 io_here          : DLESS     here_end
                  { my $r = ShellParser::Token::Redirection->new($_[1], 'HEREDOC:' . $_[2]); my $a = ""; $_[0]->{USER}->{LEXER}->got_heredoc($_[2], \$a, 0); $r }
