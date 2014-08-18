@@ -152,6 +152,8 @@ sub _get_word {
         } elsif ($c eq '$') {
             if ($$target =~ /\G (\() /gcx) {
                 $value .= $c . $1 . $self->_get_rest_b_string();
+            } else {
+                $value .= $c;
             }
         } elsif ($c eq '\\') {
             if ($$target =~ /\G (.) /gcx) {
