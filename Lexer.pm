@@ -221,6 +221,8 @@ sub _get_heredoc {
         $delim = $1;
     } elsif ($delim =~ /^"(.*)"$/) {
         $delim = $1;
+    } elsif ($delim =~ /^\\(.*)$/) {
+        $delim = $1;
     }
 
     while (1) {
