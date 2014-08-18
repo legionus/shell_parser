@@ -128,7 +128,7 @@ sub _get_next_token {
         return ('Rbrace', $lexeme) if $lexeme eq '}';
         return ('Bang',   $lexeme) if $lexeme eq '!';
 
-        return ('ASSIGNMENT_WORD', $lexeme) if ($lexeme =~ /^[A-Za-z0-9]+=/);
+        return ('ASSIGNMENT_WORD', $lexeme) if ($lexeme =~ /^[A-Za-z0-9_]+=/);
 
         $self->{state} = STATE_COMMAND;
         return ('WORD', $lexeme);
