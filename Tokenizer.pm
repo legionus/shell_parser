@@ -77,7 +77,7 @@ sub _get_next_token {
         }
         return ('NEWLINE', $lexeme);
     }
-    if ($lexeme =~ /^\s*$/) {
+    if ($lexeme =~ /^\s*$/ || $lexeme =~ /^(\\\n)*$/) {
         return $self->_get_next_token();
     }
 

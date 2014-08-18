@@ -206,6 +206,7 @@ sub _get_word {
             if ($$target =~ /\G (.) /gcx) {
                 $value .= $c . $1;
             } else {
+                $value .= $c . "\n";
                 $self->{current_line} = $self->{reader}->('token', '\\');
                 die "Unexpected end of input" if !defined($self->{current_line});
                 $target = \$self->{current_line};
