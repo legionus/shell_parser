@@ -299,9 +299,8 @@ use Tokenizer;
 sub _Error {
     my ($parser) = shift;
 
-    #my $target = \$parser->YYData->{INPUT};
-
-    #$parser->YYData->{ERR_POS} = pos($$target);
+    $parser->YYData->{ERR_LINE} = $parser->YYData->{LEXER}->{lexer}->{current_line};
+    $parser->YYData->{ERR_POS} = pos($parser->YYData->{LEXER}->{lexer}->{current_line});
     if (!$parser->YYData->{ERR_MSG}) {
         my ($tok, $val) = ($parser->YYCurtok, $parser->YYCurval);
         my $expect_toks = join(' or ', map { /^[A-Z]*$/ ? $_ : "'$_'" } $parser->YYExpect);
@@ -311,13 +310,14 @@ sub _Error {
 
 sub _Lexer {
     my ($parser) = shift;
-
     return $parser->YYData->{LEXER}->_get_next_token();
 }
 
 sub parse {
     my ($self, $filehandle) = @_;
+    $self->YYData->{LINENO} = 0;
     $self->YYData->{LEXER} = Tokenizer->new(sub {
+        $self->YYData->{LINENO} += 1;
         return scalar <$filehandle>;
     });
     $self->YYParse(yylex => \&_Lexer, yyerror => \&_Error, yydebug => 0x1f);
@@ -325,12 +325,11 @@ sub parse {
 
 sub error {
     my ($parser) = shift;
-
-    my $current_line = $parser->YYData->{LEXER}->{lexer}->{current_line};
-    my $message = $parser->YYData->{ERR_MSG};
-    #my $position = $parser->YYData->{ERR_POS};
-    #return "$$target\n" .
-    #    ("-" x ($position - 1)) . "^\n$message\n";
-    return ($current_line ? "$current_line\n" : "") . "$message\n";
+    return {
+        line => $parser->YYData->{ERR_LINE},
+        lineno => $parser->YYData->{LINENO},
+        position => $parser->YYData->{ERR_POS},
+        message => $parser->YYData->{ERR_MSG},
+    };
 }
 

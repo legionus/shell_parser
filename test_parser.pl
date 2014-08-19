@@ -4,7 +4,6 @@ use strict;
 use warnings;
 #use diagnostics;
 
-use Data::Dumper;
 use ShellParser;
 
 sub print_token {
@@ -28,7 +27,16 @@ my $result = $p->parse($fh);
 close($fh);
 
 if (!$result) {
-    print $p->error;
+    my $err = $p->error;
+
+    my $line = ($err->{line} // "(EOF)");
+    chomp($line);
+    $line =~ s/\t/ /;
+
+    my $lineno_prefix = "$err->{lineno}: ";
+    print $lineno_prefix . $line . "\n";
+    print "-" x (length($lineno_prefix) + ($err->{position} // 1) - 1) . "^\n";
+    print $err->{message} . "\n";
     exit(1);
 } else {
 	print_token(".   ", 0, $result);
