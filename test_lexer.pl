@@ -4,7 +4,7 @@ use strict;
 use warnings;
 #use diagnostics;
 
-use Lexer;
+use ShellParser::Lexer;
 
 use constant NEWLINE => "<NEWLINE>";
 use constant TAB => "<TAB>";
@@ -42,7 +42,7 @@ if ($ARGV[0]) {
     *F = *STDIN;
 }
 
-my $lex = Lexer->new(sub {
+my $lex = ShellParser::Lexer->new(sub {
 	return scalar <F>;
 });
 

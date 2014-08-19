@@ -3,9 +3,9 @@ COLOR_RED=$(ESC)[31m
 COLOR_GREEN=$(ESC)[32m
 COLOR_RESET=$(ESC)[0m
 
-all: ShellParser.pm
+all: lib/ShellParser.pm
 
-ShellParser.pm: ShellParser.yp
+lib/ShellParser.pm: lib/ShellParser.yp
 	yapp $<
 
 test:

@@ -4,11 +4,11 @@ use strict;
 use warnings;
 #use diagnostics;
 
-use Tokenizer;
+use ShellParser::Tokenizer;
 
 open(F, '<', $ARGV[0]) or die $!;
 
-my $lex = Tokenizer->new(sub {
+my $lex = ShellParser::Tokenizer->new(sub {
 	return scalar <F>;
 });
 while (1) {

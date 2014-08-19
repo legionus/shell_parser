@@ -1,4 +1,6 @@
 %{
+our $VERSION = '0.1.0';
+
 use ShellParser::Token::AndOrList;
 use ShellParser::Token::BraceGroup;
 use ShellParser::Token::Case;
@@ -294,7 +296,7 @@ sequential_sep   : ';' linebreak
 
 %%
 
-use Tokenizer;
+use ShellParser::Tokenizer;
 
 sub _Error {
     my ($parser) = shift;
@@ -315,7 +317,7 @@ sub _Lexer {
 
 sub parse {
     my ($self, $reader) = @_;
-    $self->YYData->{LEXER} = Tokenizer->new($reader);
+    $self->YYData->{LEXER} = ShellParser::Tokenizer->new($reader);
     $self->YYParse(yylex => \&_Lexer, yyerror => \&_Error);
 }
 

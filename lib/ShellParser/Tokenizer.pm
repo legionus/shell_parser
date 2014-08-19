@@ -1,9 +1,9 @@
-package Tokenizer;
+package ShellParser::Tokenizer;
 
 use strict;
 use warnings;
 
-use Lexer;
+use ShellParser::Lexer;
 
 use constant {
     STATE_NORMAL            => 0,
@@ -46,7 +46,7 @@ my %operators = (
 sub new {
     my ($class, $reader) = @_;
     my $self = {
-        lexer => Lexer->new($reader),
+        lexer => ShellParser::Lexer->new($reader),
         state => STATE_NORMAL,
     };
     return bless($self, $class);

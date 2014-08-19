@@ -1,4 +1,4 @@
-package Lexer;
+package ShellParser::Lexer;
 
 use strict;
 use warnings;
