@@ -2,6 +2,7 @@ package ShellParser::Token::Word;
 
 use strict;
 use warnings;
+use overload '""' => \&as_string;
 
 use base 'ShellParser::Token';
 
@@ -10,6 +11,11 @@ sub new {
     return bless({
         value => $value,
     }, $class);
+}
+
+sub as_string {
+    my ($self) = @_;
+    return $self->{value};
 }
 
 sub p_args {
