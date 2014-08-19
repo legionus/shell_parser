@@ -320,7 +320,7 @@ sub parse {
         $self->YYData->{LINENO} += 1;
         return scalar <$filehandle>;
     });
-    $self->YYParse(yylex => \&_Lexer, yyerror => \&_Error, yydebug => 0x1f);
+    $self->YYParse(yylex => \&_Lexer, yyerror => \&_Error);
 }
 
 sub error {
