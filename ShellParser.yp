@@ -314,12 +314,8 @@ sub _Lexer {
 }
 
 sub parse {
-    my ($self, $filehandle) = @_;
-    $self->YYData->{LINENO} = 0;
-    $self->YYData->{LEXER} = Tokenizer->new(sub {
-        $self->YYData->{LINENO} += 1;
-        return scalar <$filehandle>;
-    });
+    my ($self, $reader) = @_;
+    $self->YYData->{LEXER} = Tokenizer->new($reader);
     $self->YYParse(yylex => \&_Lexer, yyerror => \&_Error);
 }
 

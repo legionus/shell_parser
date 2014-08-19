@@ -5,6 +5,7 @@ use warnings;
 #use diagnostics;
 
 use ShellParser;
+use Term::ReadLine;
 
 sub print_token {
 	my ($sep, $depth, $token, $name) = @_;
@@ -21,10 +22,31 @@ sub print_token {
 	});
 }
 
-open(my $fh, '<', $ARGV[0]) or die $!;
+my $lineno = 0;
+my $reader;
+if ($ARGV[0]) {
+    open(my $fh, '<', $ARGV[0]) or die $!;
+    $reader = sub {
+        $lineno++;
+        return scalar <$fh>;
+    };
+} else {
+    my $term = Term::ReadLine->new('Shell');
+    my $OUT = $term->OUT || \*STDOUT;
+    $term->ornaments(0);
+    $reader = sub {
+        my ($xxx, $type) = @_;
+        $type //= "";
+        $lineno++;
+        my $line = $term->readline("$type >>> ");
+        $line .= "\n" if $line;
+        return $line;
+    }
+}
+
 my $p = ShellParser->new();
-my $result = $p->parse($fh);
-close($fh);
+my $result = $p->parse($reader);
+# FIXME close($fh);
 
 if (!$result) {
     my $err = $p->error;
@@ -33,7 +55,7 @@ if (!$result) {
     chomp($line);
     $line =~ s/\t/ /;
 
-    my $lineno_prefix = "$err->{lineno}: ";
+    my $lineno_prefix = "$lineno: ";
     print $lineno_prefix . $line . "\n";
     print "-" x (length($lineno_prefix) + ($err->{position} // 1) - 1) . "^\n";
     print $err->{message} . "\n";
