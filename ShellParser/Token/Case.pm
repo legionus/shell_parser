@@ -13,14 +13,11 @@ sub new {
     }, $class);
 }
 
-sub print {
-    my $self = shift;
-    $self->_p_head("", @_);
-
-    my ($sep, $depth) = @_;
-    $self->{word}->print($sep, $depth + 1, "word");
+sub traverse {
+    my ($self, $cb) = @_;
+    $cb->($self->{word}, "word");
     foreach my $elem (@{$self->{items}}) {
-        $elem->print($sep, $depth + 1, "item");
+        $cb->($elem, "item");
     }
 }
 

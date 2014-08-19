@@ -14,15 +14,17 @@ sub new {
     }, $class);
 }
 
-sub print {
-    my $self = shift;
-    $self->_p_head("name=$self->{name}", @_);
+sub p_args {
+    my ($self) = @_;
+    return "name=$self->{name}";
+}
 
-    my ($sep, $depth) = @_;
-    $self->{body}->print($sep, $depth + 1, "body");
+sub traverse {
+    my ($self, $cb) = @_;
+    $cb->($self->{body}, "body");
     if ($self->{redirect}) {
         foreach my $redirect (@{$self->{redirect}}) {
-            $redirect->print($sep, $depth + 1, "redirect");
+            $cb->($redirect, "redirect");
         }
     }
 }

@@ -13,13 +13,10 @@ sub new {
     }, $class);
 }
 
-sub print {
-    my $self = shift;
-    $self->_p_head("", @_);
-
-    my ($sep, $depth) = @_;
-    $self->{condition}->print($sep, $depth + 1, "condition");
-    $self->{body}->print($sep, $depth + 1, "body");
+sub traverse {
+    my ($self, $cb) = @_;
+    $cb->($self->{condition}, "condition");
+    $cb->($self->{body}, "body");
 }
 
 1;

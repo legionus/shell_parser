@@ -14,11 +14,15 @@ sub new {
     }, $class);
 }
 
-sub print {
-    my $self = shift;
+sub p_args {
+    my ($self) = @_;
     my $args = "$self->{redirection} $self->{filename}";
     $args = "$self->{left} $args" if defined($self->{left});
-    $self->_p_head($args, @_);
+    return $args;
+}
+
+sub traverse {
+    # no subitems
 }
 
 1;

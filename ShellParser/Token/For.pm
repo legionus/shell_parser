@@ -14,17 +14,19 @@ sub new {
     }, $class);
 }
 
-sub print {
-    my $self = shift;
-    $self->_p_head("variable=$self->{variable}", @_);
+sub p_args {
+    my ($self) = @_;
+    return "variable=$self->{variable}";
+}
 
-    my ($sep, $depth) = @_;
+sub traverse {
+    my ($self, $cb) = @_;
     if ($self->{words}) {
         foreach my $word (@{$self->{words}}) {
-            $word->print($sep, $depth + 1, "word");
+            $cb->($word, "word");
         }
     }
-    $self->{body}->print($sep, $depth + 1, "body");
+    $cb->($self->{body}, "body");
 }
 
 1;

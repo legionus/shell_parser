@@ -12,12 +12,9 @@ sub new {
     }, $class);
 }
 
-sub print {
-    my $self = shift;
-    $self->_p_head("", @_);
-
-    my ($sep, $depth) = @_;
-    $self->{body}->print($sep, $depth + 1);
+sub traverse {
+    my ($self, $cb) = @_;
+    $cb->($self->{body});
 }
 
 1;

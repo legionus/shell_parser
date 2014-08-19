@@ -14,19 +14,16 @@ sub new {
     }, $class);
 }
 
-sub print {
-    my $self = shift;
-    $self->_p_head("", @_);
-
-    my ($sep, $depth) = @_;
+sub traverse {
+    my ($self, $cb) = @_;
     foreach my $elem (@{$self->{prefix}}) {
-        $elem->print($sep, $depth + 1, "prefix");
+        $cb->($elem, "prefix");
     }
     if (defined($self->{name})) {
-        $self->{name}->print($sep, $depth + 1, "name");
+        $cb->($self->{name}, "name");
     }
     foreach my $elem (@{$self->{args}}) {
-        $elem->print($sep, $depth + 1, "argument");
+        $cb->($elem, "argument");
     }
 }
 

@@ -7,6 +7,21 @@ use warnings;
 use Data::Dumper;
 use ShellParser;
 
+sub print_token {
+	my ($sep, $depth, $token, $name) = @_;
+
+	my $type = ref($token);
+	$type =~ s/.*:://;
+
+	$name //= "";
+	$name = "$name: " if $name;
+
+	print $sep x $depth . $name . $type . "(" . $token->p_args(). ")\n";
+	$token->traverse(sub {
+		print_token($sep, $depth + 1, @_);
+	});
+}
+
 open(my $fh, '<', $ARGV[0]) or die $!;
 my $p = ShellParser->new();
 my $result = $p->parse($fh);
@@ -16,5 +31,5 @@ if (!$result) {
     print $p->error;
     exit(1);
 } else {
-    $result->print(".   ", 0);
+	print_token(".   ", 0, $result);
 }

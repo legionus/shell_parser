@@ -18,13 +18,15 @@ sub append {
     push(@{$self->{body}}, $element);
 }
 
-sub print {
-    my $self = shift;
-    $self->_p_head("banged=$self->{banged}", @_);
+sub p_args {
+    my ($self) = @_;
+    return "banged=$self->{banged}";
+}
 
-    my ($sep, $depth) = @_;
+sub traverse {
+    my ($self, $cb) = @_;
     foreach my $elem (@{$self->{body}}) {
-        $elem->print($sep, $depth + 1);
+        $cb->($elem);
     }
 }
 

@@ -19,14 +19,16 @@ sub append {
     push(@{$self->{rest}}, [$op, $element]);
 }
 
-sub print {
-    my $self = shift;
-    $self->_p_head("sep=$self->{sep}", @_);
+sub p_args {
+    my ($self) = @_;
+    return "sep=$self->{sep}";
+}
 
-    my ($sep, $depth) = @_;
-    $self->{first}->print($sep, $depth + 1, "first");
+sub traverse {
+    my ($self, $cb) = @_;
+    $cb->($self->{first}, "first");
     foreach my $elem (@{$self->{rest}}) {
-        $elem->[1]->print($sep, $depth + 1, "rest[$elem->[0]]");
+        $cb->($elem->[1], "rest[$elem->[0]]");
     }
 }
 

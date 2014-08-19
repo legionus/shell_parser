@@ -19,17 +19,14 @@ sub append {
     push @{$self->{body}}, @{$if_block->{body}};
 }
 
-sub print {
-    my $self = shift;
-    $self->_p_head("", @_);
-
-    my ($sep, $depth) = @_;
+sub traverse {
+    my ($self, $cb) = @_;
     foreach my $elem (@{$self->{body}}) {
         if (defined($elem->{condition})) {
-            $elem->{condition}->print($sep, $depth + 1, "condition");
-            $elem->{body}->print($sep, $depth + 1, "then");
+            $cb->($elem->{condition}, "condition");
+            $cb->($elem->{body}, "then");
         } else {
-            $elem->{body}->print($sep, $depth + 1, "else");
+            $cb->($elem->{body}, "else");
         }
     }
 }

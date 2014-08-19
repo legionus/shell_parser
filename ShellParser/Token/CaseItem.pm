@@ -13,16 +13,13 @@ sub new {
     }, $class);
 }
 
-sub print {
-    my $self = shift;
-    $self->_p_head("", @_);
-
-    my ($sep, $depth) = @_;
+sub traverse {
+    my ($self, $cb) = @_;
     foreach my $elem (@{$self->{pattern}}) {
-	    $elem->print($sep, $depth + 1, "pattern");
+        $cb->($elem, "pattern");
     }
     if ($self->{body}) {
-	    $self->{body}->print($sep, $depth + 1, "body");
+        $cb->($self->{body}, "body");
     }
 }
 

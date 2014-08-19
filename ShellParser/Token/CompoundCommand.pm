@@ -13,14 +13,11 @@ sub new {
     }, $class);
 }
 
-sub print {
-    my $self = shift;
-    $self->_p_head("", @_);
-
-    my ($sep, $depth) = @_;
-    $self->{body}->print($sep, $depth + 1, "body");
+sub traverse {
+    my ($self, $cb) = @_;
+    $cb->($self->{body}, "body");
     foreach my $elem (@{$self->{redirect}}) {
-        $elem->print($sep, $depth + 1, "redirect");
+        $cb->($elem, "redirect");
     }
 }
 

@@ -12,14 +12,18 @@ sub new {
     }, $class);
 }
 
-sub print {
-    my $self = shift;
+sub p_args {
+    my ($self) = @_;
     my $v = $self->{value};
     $v =~ s/</<LESS>/g;
     $v =~ s/>/<GREATER>/g;
     $v =~ s/\\/<SLASH>/g;
     $v =~ s/\n/<NEWLINE>/g;
-    $self->_p_head($v, @_);
+    return $v;
+}
+
+sub traverse {
+    # no subitems
 }
 
 1;
