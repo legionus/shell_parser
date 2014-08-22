@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use ShellParser::Lexeme;
+use ShellParser::Lexeme::LineConcat;
 use ShellParser::Lexeme::Word;
 
 my @operators = qw(
@@ -207,7 +208,7 @@ sub _get_word {
             if ($$target =~ /\G (.) /gcx) {
                 push(@value_parts, ShellParser::Lexeme->new($c . $1));
             } else {
-                push(@value_parts, ShellParser::Lexeme->new($c . "\n"));
+                push(@value_parts, ShellParser::Lexeme::LineConcat->new());
                 $self->{current_line} = $self->{reader}->('token', '\\');
                 die "Unexpected end of input" if !defined($self->{current_line});
                 $target = \$self->{current_line};
