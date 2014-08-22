@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use ShellParser::Lexeme;
+use ShellParser::Lexeme::Word;
 
 my @operators = qw(
     &&
@@ -158,7 +159,7 @@ sub _get_rest_b_string {
     while (1) {
         my $word = $self->_get_word();
         if (defined($word)) {
-            $value .= $word;
+            $value .= $word->as_string();  # FIXME
         } elsif ($$target =~ /\G (.) /gcx) {
             my $c = $1;
             $value .= $c;
@@ -190,36 +191,34 @@ sub _get_word {
     my ($self) = @_;
     my $target = \$self->{current_line};
 
-    my $value = undef;
+    my @value_parts;
 
     while ($$target =~ /\G ([^\s<>()|;&]) /gcx) {
-        $value //= "";
-
         my $c = $1;
         if ($c eq "'") {
-            $value .= $c . $self->_get_rest_q_string();
+            push(@value_parts, ShellParser::Lexeme->new($c . $self->_get_rest_q_string()));
         } elsif ($c eq '"') {
-            $value .= $c . $self->_get_rest_qq_string();
+            push(@value_parts, ShellParser::Lexeme->new($c . $self->_get_rest_qq_string()));
         } elsif ($c eq '`') {
-            $value .= $c . $self->_get_rest_qx_string();
+            push(@value_parts, ShellParser::Lexeme->new($c . $self->_get_rest_qx_string()));
         } elsif ($c eq '$') {
-            $value .= $c . $self->_get_rest_variable();
+            push(@value_parts, ShellParser::Lexeme->new($c . $self->_get_rest_variable()));
         } elsif ($c eq '\\') {
             if ($$target =~ /\G (.) /gcx) {
-                $value .= $c . $1;
+                push(@value_parts, ShellParser::Lexeme->new($c . $1));
             } else {
-                $value .= $c . "\n";
+                push(@value_parts, ShellParser::Lexeme->new($c . "\n"));
                 $self->{current_line} = $self->{reader}->('token', '\\');
                 die "Unexpected end of input" if !defined($self->{current_line});
                 $target = \$self->{current_line};
             }
         } else {
-            $value .= $c;
+            push(@value_parts, ShellParser::Lexeme->new($c));
         }
     }
 
-    if (defined($value)) {
-        return ShellParser::Lexeme->new($value);
+    if (@value_parts != 0) {
+        return ShellParser::Lexeme::Word->new(\@value_parts);
     } else {
         return;
     }
