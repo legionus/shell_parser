@@ -3,6 +3,8 @@ package ShellParser::Lexer;
 use strict;
 use warnings;
 
+use ShellParser::Lexeme;
+
 my @operators = qw(
     &&
     ;;
@@ -216,7 +218,11 @@ sub _get_word {
         }
     }
 
-    return $value;
+    if (defined($value)) {
+        return ShellParser::Lexeme->new($value);
+    } else {
+        return;
+    }
 }
 
 sub _get_heredoc {
@@ -278,12 +284,12 @@ sub get_next_lexeme {
 
     my $target = \$self->{current_line};
     TOKEN: {
-        return $1 if $$target =~ /\G (\n)   /gcx;
-        return $1 if $$target =~ /\G (\#.*) /gcx;
-        return $1 if $$target =~ /\G ([ \t]+)  /gcx;
+        return ShellParser::Lexeme->new($1) if $$target =~ /\G (\n)   /gcx;
+        return ShellParser::Lexeme->new($1) if $$target =~ /\G (\#.*) /gcx;
+        return ShellParser::Lexeme->new($1) if $$target =~ /\G ([ \t]+)  /gcx;
 
         foreach my $q (@operators) {
-            return $1 if ($$target =~ /\G (\Q$q\E) /gcx);
+            return ShellParser::Lexeme->new($1) if ($$target =~ /\G (\Q$q\E) /gcx);
         }
 
         my $word = $self->_get_word();
@@ -291,7 +297,7 @@ sub get_next_lexeme {
             return $word;
         }
 
-        return ($1, $1) if $$target =~ /\G (.) /gcx;
+        return ShellParser::Lexeme->new($1) if $$target =~ /\G (.) /gcx;
 
         $self->{current_line} = undef;
         return $self->get_next_lexeme();

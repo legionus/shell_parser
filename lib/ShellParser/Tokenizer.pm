@@ -64,6 +64,7 @@ sub _get_next_token {
     if (!defined($lexeme)) {
         return ('', undef);
     }
+    $lexeme = $lexeme->as_string();
 
     if ($lexeme eq "\n") {
         if ($self->{state} != STATE_CASE_WAIT_PATTERN) {

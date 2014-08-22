@@ -3,10 +3,9 @@ COLOR_RED=$(ESC)[31m
 COLOR_GREEN=$(ESC)[32m
 COLOR_RESET=$(ESC)[0m
 
-all: lib/ShellParser.pm
-
-lib/ShellParser.pm: lib/ShellParser.yp
-	yapp $<
+all:
+	perl Build.PL
+	./Build
 
 test:
 	@! test -e .test.out || { echo 'Please, remove .test.out first' && exit 1; }
