@@ -14,13 +14,9 @@ sub new {
     }, $class);
 }
 
-sub p_args {
-    my ($self) = @_;
-    return "name=$self->{name}";
-}
-
 sub traverse {
     my ($self, $cb) = @_;
+    $cb->($self->{name}, "name");
     $cb->($self->{body}, "body");
     if ($self->{redirect}) {
         foreach my $redirect (@{$self->{redirect}}) {

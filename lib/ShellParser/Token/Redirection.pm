@@ -16,13 +16,14 @@ sub new {
 
 sub p_args {
     my ($self) = @_;
-    my $args = "$self->{redirection} $self->{filename}";
+    my $args = "$self->{redirection}";
     $args = "$self->{left} $args" if defined($self->{left});
     return $args;
 }
 
 sub traverse {
-    # no subitems
+    my ($self, $cb) = @_;
+    $cb->($self->{filename}, "filename");
 }
 
 1;

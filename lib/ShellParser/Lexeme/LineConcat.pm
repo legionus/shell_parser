@@ -18,4 +18,8 @@ sub raw_string {
     return "\n";
 }
 
+sub p_args {
+    return "";
+}
+
 1;

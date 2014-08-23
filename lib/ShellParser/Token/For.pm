@@ -14,13 +14,9 @@ sub new {
     }, $class);
 }
 
-sub p_args {
-    my ($self) = @_;
-    return "variable=$self->{variable}";
-}
-
 sub traverse {
     my ($self, $cb) = @_;
+    $cb->($self->{variable}, "variable");
     if ($self->{words}) {
         foreach my $word (@{$self->{words}}) {
             $cb->($word, "word");

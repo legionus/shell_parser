@@ -12,7 +12,7 @@ test:
 	@find t/ -name '*.sh' | sort | while read -r f; \
 	do \
 		printf "%s" "$$f"; \
-		if ./test_parser.pl "$$f" 1>.test.out 2>/dev/null; then \
+		if ./test_parser.pl "$$f" 1>.test.out; then \
 			if cmp -s "$${f%.sh}.out" .test.out; then \
 				echo ' ok'; \
 			else \

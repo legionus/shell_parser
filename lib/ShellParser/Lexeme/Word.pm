@@ -23,4 +23,15 @@ sub raw_string {
     return join('', map { $_->raw_string() } @{$self->{value}});
 }
 
+sub p_args {
+    return "";
+}
+
+sub traverse {
+    my ($self, $cb) = @_;
+    foreach my $elem (@{$self->{value}}) {
+        $cb->($elem);
+    }
+}
+
 1;

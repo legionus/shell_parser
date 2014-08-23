@@ -60,11 +60,11 @@ sub got_heredoc {
 sub _get_next_token {
     my ($self) = @_;
 
-    my $lexeme = $self->{lexer}->get_next_lexeme();
-    if (!defined($lexeme)) {
+    my $lexeme_obj = $self->{lexer}->get_next_lexeme();
+    if (!defined($lexeme_obj)) {
         return ('', undef);
     }
-    $lexeme = $lexeme->as_string();
+    my $lexeme = $lexeme_obj->as_string();
 
     if ($lexeme eq "\n") {
         if ($self->{state} != STATE_CASE_WAIT_PATTERN) {
@@ -129,10 +129,10 @@ sub _get_next_token {
         return ('Rbrace', $lexeme) if $lexeme eq '}';
         return ('Bang',   $lexeme) if $lexeme eq '!';
 
-        return ('ASSIGNMENT_WORD', $lexeme) if ($lexeme =~ /^[A-Za-z0-9_]+=/);
+        return ('ASSIGNMENT_WORD', $lexeme_obj) if ($lexeme =~ /^[A-Za-z0-9_]+=/);
 
         $self->{state} = STATE_COMMAND;
-        return ('WORD', $lexeme);
+        return ('WORD', $lexeme_obj);
     } elsif ($self->{state} == STATE_COMMAND) {
         if ($lexeme =~ /^[0-9]+$/) {
             my $next = $self->{lexer}->lookahead();
@@ -140,13 +140,13 @@ sub _get_next_token {
                 return ('IO_NUMBER', $lexeme);
             }
         }
-        return ('WORD', $lexeme);
+        return ('WORD', $lexeme_obj);
     } elsif ($self->{state} == STATE_WAIT_NAME) {
         $self->{state} = STATE_NORMAL;
-        return ('WORD', $lexeme);
+        return ('WORD', $lexeme_obj);
     } elsif ($self->{state} == STATE_CASE_WAIT_WORD) {
         $self->{state} = STATE_CASE_WAIT_IN;
-        return ('WORD', $lexeme);
+        return ('WORD', $lexeme_obj);
     } elsif ($self->{state} == STATE_CASE_WAIT_IN) {
         if ($lexeme ne 'in') {
             die "Expected 'in', got '$lexeme'";
@@ -158,7 +158,7 @@ sub _get_next_token {
             $self->{state} = STATE_NORMAL;
             return ('Esac', $lexeme);
         }
-        return ('WORD', $lexeme);
+        return ('WORD', $lexeme_obj);
     } else {
         die "Unexpected state: $self->{state}";
     }

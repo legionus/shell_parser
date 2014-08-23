@@ -20,6 +20,8 @@ my @operators = qw(
     <<
 );
 
+our $name_re = '(?:[A-Za-z0-9_]+|[$@])';
+
 sub new {
     my ($class, $reader) = @_;
     my $self = {
@@ -40,6 +42,8 @@ sub _get_rest_variable {
     } elsif ($$target =~ /\G ({) /gcx) {
         $value .= $1;
         $value .= $self->_get_rest_c_string();
+    } elsif ($$target =~ /\G ($name_re) /gcx) {
+        $value .= $1;
     }
     return $value;
 }
@@ -214,7 +218,15 @@ sub _get_word {
                 $target = \$self->{current_line};
             }
         } else {
-            push(@value_parts, ShellParser::Lexeme->new($c));
+            # FIXME
+            my $prev_part = $value_parts[-1];
+            if ($prev_part && $prev_part->{_simple_lexeme}) {
+                $prev_part->{value} .= $c;
+            } else {
+                my $lexeme = ShellParser::Lexeme->new($c);
+                $lexeme->{_simple_lexeme} = 1;
+                push(@value_parts, $lexeme);
+            }
         }
     }
 
@@ -227,7 +239,7 @@ sub _get_word {
 
 sub _get_heredoc {
     my ($self, $heredoc_desc) = @_;
-    my $delim = $heredoc_desc->{delim};
+    my $delim = $heredoc_desc->{delim}->as_string();
     my $accum_ref = $heredoc_desc->{accum_ref};
     my $strip_tabs = $heredoc_desc->{strip_tabs};
 

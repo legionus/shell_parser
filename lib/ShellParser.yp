@@ -9,6 +9,7 @@ use ShellParser::Token::CompoundCommand;
 use ShellParser::Token::DoGroup;
 use ShellParser::Token::For;
 use ShellParser::Token::FuncDef;
+use ShellParser::Token::HereDoc;
 use ShellParser::Token::If;
 use ShellParser::Token::List;
 use ShellParser::Token::Pipeline;
@@ -17,7 +18,6 @@ use ShellParser::Token::SimpleCommand;
 use ShellParser::Token::SubShell;
 use ShellParser::Token::Until;
 use ShellParser::Token::While;
-use ShellParser::Token::Word;
 %}
 
 
@@ -128,16 +128,16 @@ name             : WORD                     /* Apply rule 5 */
 in               : In                       /* Apply rule 6 */
                  ;
 wordlist         : wordlist WORD
-                 { push(@{$_[1]}, ShellParser::Token::Word->new($_[2])); $_[1] }
+                 { push(@{$_[1]}, $_[2]); $_[1] }
                  |          WORD
-                 { [ShellParser::Token::Word->new($_[1])] }
+                 { [$_[1]] }
                  ;
 case_clause      : Case WORD linebreak in linebreak case_list    Esac
-                 { ShellParser::Token::Case->new(ShellParser::Token::Word->new($_[2]), $_[6]) }
+                 { ShellParser::Token::Case->new($_[2], $_[6]) }
                  | Case WORD linebreak in linebreak case_list_ns Esac
-                 { ShellParser::Token::Case->new(ShellParser::Token::Word->new($_[2]), $_[6]) }
+                 { ShellParser::Token::Case->new($_[2], $_[6]) }
                  | Case WORD linebreak in linebreak              Esac
-                 { ShellParser::Token::Case->new(ShellParser::Token::Word->new($_[2]), []) }
+                 { ShellParser::Token::Case->new($_[2], []) }
                  ;
 case_list_ns     : case_list case_item_ns
                  { push(@{$_[1]}, $_[2]); $_[1] }
@@ -168,9 +168,9 @@ case_item        :     pattern ')' linebreak     DSEMI linebreak
                  { ShellParser::Token::CaseItem->new($_[1], $_[2], $_[4], $_[5]) }
                  ;
 pattern          :             WORD         /* Apply rule 4 */
-                 { [ShellParser::Token::Word->new($_[1])] }
+                 { [$_[1]] }
                  | pattern '|' WORD         /* Do not apply rule 4 */
-                 { push(@{$_[1]}, ShellParser::Token::Word->new($_[3])); $_[1] }
+                 { push(@{$_[1]}, $_[3]); $_[1] }
                  ;
 if_clause        : If compound_list Then compound_list else_part Fi
                  { my $r = ShellParser::Token::If->new($_[2], $_[4]); $r->append($_[5]); $r }
@@ -219,28 +219,26 @@ simple_command   : cmd_prefix cmd_word cmd_suffix
                  { ShellParser::Token::SimpleCommand->new([], $_[1], []) }
                  ;
 cmd_name         : WORD                   /* Apply rule 7a */
-                 { ShellParser::Token::Word->new($_[1]) }
                  ;
 cmd_word         : WORD                   /* Apply rule 7b */
-                 { ShellParser::Token::Word->new($_[1]) }
                  ;
 cmd_prefix       :            io_redirect
                  { [$_[1]] }
                  | cmd_prefix io_redirect
                  { push(@{$_[1]}, $_[2]); $_[1] }
                  |            ASSIGNMENT_WORD
-                 { [ShellParser::Token::Word->new($_[1])] }
+                 { [$_[1]] }
                  | cmd_prefix ASSIGNMENT_WORD
-                 { push(@{$_[1]}, ShellParser::Token::Word->new($_[2])); $_[1] }
+                 { push(@{$_[1]}, $_[2]); $_[1] }
                  ;
 cmd_suffix       :            io_redirect
                  { [$_[1]] }
                  | cmd_suffix io_redirect
                  { push(@{$_[1]}, $_[2]); $_[1] }
                  |            WORD
-                 { [ShellParser::Token::Word->new($_[1])] }
+                 { [$_[1]] }
                  | cmd_suffix WORD
-                 { push(@{$_[1]}, ShellParser::Token::Word->new($_[2])); $_[1] }
+                 { push(@{$_[1]}, $_[2]); $_[1] }
                  ;
 redirect_list    :               io_redirect
                  { [$_[1]] }
@@ -270,11 +268,12 @@ io_file          : '<'       filename
                  ;
 filename         : WORD                      /* Apply rule 2 */
                  | IO_NUMBER
+                 { ShellParser::Lexeme->new($_[1]) }
                  ;
 io_here          : DLESS     here_end
-                 { my $r = ShellParser::Token::Redirection->new($_[1], 'HEREDOC:' . $_[2]); my $a = ""; $_[0]->{USER}->{LEXER}->got_heredoc($_[2], \$a, 0); $r }
+                 { my $r = ShellParser::Token::HereDoc->new($_[1], $_[2]); $_[0]->{USER}->{LEXER}->got_heredoc($_[2], \$r->{value}, 0); $r }
                  | DLESSDASH here_end
-                 { my $r = ShellParser::Token::Redirection->new($_[1], 'HEREDOC:' . $_[2]); my $a = ""; $_[0]->{USER}->{LEXER}->got_heredoc($_[2], \$a, 1); $r }
+                 { my $r = ShellParser::Token::HereDoc->new($_[1], $_[2]); $_[0]->{USER}->{LEXER}->got_heredoc($_[2], \$r->{value}, 1); $r }
                  ;
 here_end         : WORD                      /* Apply rule 3 */
                  ;

@@ -23,4 +23,23 @@ sub raw_string {
     return $self->{value};
 }
 
+sub p_args {
+    my ($self) = @_;
+    my $v = $self->{value};
+
+    $v =~ s/</<LESS/g;
+    $v =~ s/>/<GREATER>/g;
+    $v =~ s/<LESS/<LESS>/g;
+
+    $v =~ s/\(/<OPEN>/g;
+    $v =~ s/\)/<CLOSE>/g;
+    $v =~ s/\\/<SLASH>/g;
+    $v =~ s/\t/<TAB>/g;
+    $v =~ s/\n/<NEWLINE>/g;
+    return $v;
+}
+
+sub traverse {
+}
+
 1;
