@@ -127,14 +127,12 @@ sub _get_next_token {
         return ('Rbrace', $lexeme) if $lexeme eq '}';
         return ('Bang',   $lexeme) if $lexeme eq '!';
 
-        if ($lexeme =~ /^[A-Za-z0-9_]+=/) {
-            my $next = $self->{lexer}->lookahead_direct();
-            if ($next eq '(') {
-                $self->{state} = STATE_ARRAY_WAIT_BRACE;
-                return ('ASSIGNMENT_WORD_ARRAY', $lexeme_obj);
-            } else {
-                return ('ASSIGNMENT_WORD', $lexeme_obj);
-            }
+        my $next = $self->{lexer}->lookahead_direct();
+        if ($next eq '(' && $lexeme =~ /^[A-Za-z0-9_]+\+?=/) {
+            $self->{state} = STATE_ARRAY_WAIT_BRACE;
+            return ('ASSIGNMENT_WORD_ARRAY', $lexeme_obj);
+        } elsif ($lexeme =~ /^[A-Za-z0-9_]+=/) {
+            return ('ASSIGNMENT_WORD', $lexeme_obj);
         }
 
         $self->{state} = STATE_COMMAND;
