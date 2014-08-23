@@ -1,0 +1,8 @@
+List()
+.   AndOrList(sep=)
+.   .   first: Pipeline(banged=0)
+.   .   .   SimpleCommand()
+.   .   .   .   name: Word()
+.   .   .   .   .   Lexeme(echo)
+.   .   .   .   argument: Word()
+.   .   .   .   .   Lexeme("$<OPEN>cat <LESS><LESS>A; cat <LESS><LESS>B<NEWLINE>hello<NEWLINE>A<NEWLINE>world<NEWLINE>B<NEWLINE><CLOSE>, %username%")
