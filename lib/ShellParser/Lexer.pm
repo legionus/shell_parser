@@ -6,6 +6,7 @@ use warnings;
 use ShellParser::Lexeme;
 use ShellParser::Lexeme::LineConcat;
 use ShellParser::Lexeme::QString;
+use ShellParser::Lexeme::QQString;
 use ShellParser::Lexeme::Word;
 
 my @operators = qw(
@@ -70,33 +71,51 @@ sub _get_q_string {
     die "Unreachable code";
 }
 
-sub _get_rest_qq_string {
+sub _get_qq_string {
     my ($self) = @_;
     my $target = \$self->{current_line};
 
-    my $value = "";
+    my @value_parts;
     while (1) {
         if ($$target =~ /\G (.) /gcx) {
             my $c = $1;
-            $value .= $c;
 
             if ($c eq '"') {
-                return $value;
+                return ShellParser::Lexeme::QQString->new(\@value_parts);
             } elsif ($c eq '$') {
-                $value .= $self->_get_rest_variable();
+                push(@value_parts, ShellParser::Lexeme->new($c . $self->_get_rest_variable()));
             } elsif ($c eq '\\') {
                 if ($$target =~ /\G (.) /gcx) {
-                    $value .= $1;
+                    push(@value_parts, ShellParser::Lexeme->new($c . $1));
                 } else {
                     $self->{current_line} = $self->{reader}->('token', '"');
                     die "Unexpected end of input while scanning \"...\" string" if !defined($self->{current_line});
-                    $value .= "\n";
+                    push(@value_parts, ShellParser::Lexeme->new($c . "\n"));
+                }
+            } else {
+                # FIXME
+                my $prev_part = $value_parts[-1];
+                if ($prev_part && $prev_part->{_simple_lexeme}) {
+                    $prev_part->{value} .= $c;
+                } else {
+                    my $lexeme = ShellParser::Lexeme->new($c);
+                    $lexeme->{_simple_lexeme} = 1;
+                    push(@value_parts, $lexeme);
                 }
             }
         } else {
             $self->{current_line} = $self->{reader}->('token', '"');
             die "Unexpected end of input while scanning \"...\" string" if !defined($self->{current_line});
-            $value .= "\n";
+
+            # FIXME
+            my $prev_part = $value_parts[-1];
+            if ($prev_part && $prev_part->{_simple_lexeme}) {
+                $prev_part->{value} .= "\n";
+            } else {
+                my $lexeme = ShellParser::Lexeme->new("\n");
+                $lexeme->{_simple_lexeme} = 1;
+                push(@value_parts, $lexeme);
+            }
         }
     }
 
@@ -137,7 +156,7 @@ sub _get_rest_c_string {
             } elsif ($c eq "'") {
                 $value .= $self->_get_q_string()->raw_string();  # FIXME
             } elsif ($c eq '"') {
-                $value .= $c . $self->_get_rest_qq_string();
+                $value .= $self->_get_qq_string()->raw_string();  # FIXME
             } elsif ($c eq '\\') {
                 if ($$target =~ /\G (.) /gcx) {
                     $value .= $c . $1;
@@ -176,7 +195,7 @@ sub _get_rest_b_string {
             } elsif ($c eq "'") {
                 $value .= $self->_get_q_string()->raw_string();  # FIXME
             } elsif ($c eq '"') {
-                $value .= $c . $self->_get_rest_qq_string();
+                $value .= $self->_get_qq_string()->raw_string();  # FIXME
             } elsif ($c eq '`') {
                 $value .= $c . $self->_get_rest_qx_string();
             } elsif ($c eq '$') {
@@ -207,7 +226,7 @@ sub _get_word {
         if ($c eq "'") {
             push(@value_parts, $self->_get_q_string());
         } elsif ($c eq '"') {
-            push(@value_parts, ShellParser::Lexeme->new($c . $self->_get_rest_qq_string()));
+            push(@value_parts, $self->_get_qq_string());
         } elsif ($c eq '`') {
             push(@value_parts, ShellParser::Lexeme->new($c . $self->_get_rest_qx_string()));
         } elsif ($c eq '$') {
