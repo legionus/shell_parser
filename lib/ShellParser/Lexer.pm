@@ -90,7 +90,7 @@ sub _get_qq_string {
                 } else {
                     $self->{current_line} = $self->{reader}->('token', '"');
                     die "Unexpected end of input while scanning \"...\" string" if !defined($self->{current_line});
-                    push(@value_parts, ShellParser::Lexeme->new($c . "\n"));
+                    push(@value_parts, ShellParser::Lexeme::LineConcat->new());
                 }
             } else {
                 # FIXME
