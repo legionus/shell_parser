@@ -2,6 +2,7 @@
 our $VERSION = '0.1.0';
 
 use ShellParser::Token::AndOrList;
+use ShellParser::Token::Array;
 use ShellParser::Token::BraceGroup;
 use ShellParser::Token::Case;
 use ShellParser::Token::CaseItem;
@@ -229,6 +230,20 @@ cmd_prefix       :            io_redirect
                  |            ASSIGNMENT_WORD
                  { [$_[1]] }
                  | cmd_prefix ASSIGNMENT_WORD
+                 { push(@{$_[1]}, $_[2]); $_[1] }
+                 |            assignment_array
+                 { [$_[1]] }
+                 | cmd_prefix assignment_array
+                 { push(@{$_[1]}, $_[2]); $_[1] }
+                 ;
+assignment_array : ASSIGNMENT_WORD_ARRAY '(' linebreak ')'
+                 { ShellParser::Token::Array->new($_[1], []) }
+                 | ASSIGNMENT_WORD_ARRAY '(' linebreak array_words ')'
+                 { ShellParser::Token::Array->new($_[1], $_[4]) }
+                 ;
+array_words      :             WORD linebreak
+                 { [$_[1]] }
+                 | array_words WORD linebreak
                  { push(@{$_[1]}, $_[2]); $_[1] }
                  ;
 cmd_suffix       :            io_redirect

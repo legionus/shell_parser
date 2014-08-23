@@ -12,6 +12,7 @@ use constant {
     STATE_CASE_WAIT_WORD    => 3,
     STATE_CASE_WAIT_IN      => 4,
     STATE_CASE_WAIT_PATTERN => 5,
+    STATE_ARRAY_WAIT_BRACE  => 6,
 };
 
 my @reserved_words = qw(
@@ -72,6 +73,7 @@ sub _get_next_token {
         }
         return ('NEWLINE', '');
     }
+
     if ($lexeme =~ /^#/) {
         return $self->_get_next_token();
     }
@@ -85,7 +87,7 @@ sub _get_next_token {
                 $self->{state} = STATE_CASE_WAIT_PATTERN;
             }
             if ($op eq '||' || $op eq '&&') {
-                if ($self->{state} eq STATE_COMMAND) {
+                if ($self->{state} == STATE_COMMAND) {
                     $self->{state} = STATE_NORMAL;
                 }
             }
@@ -94,13 +96,12 @@ sub _get_next_token {
     }
 
     if ($lexeme =~ /^[<>()|;&]$/) {
-        if ($self->{state} == STATE_CASE_WAIT_PATTERN && $lexeme eq ')') {
-            $self->{state} = STATE_NORMAL;
-            return ($lexeme, $lexeme);
+        if ($self->{state} == STATE_ARRAY_WAIT_BRACE) {
+            $self->{state} = STATE_COMMAND;
         } else {
             $self->{state} = STATE_NORMAL;
-            return ($lexeme, $lexeme);
         }
+        return ($lexeme, $lexeme);
     }
 
     if ($self->{state} == STATE_NORMAL) {
@@ -126,7 +127,15 @@ sub _get_next_token {
         return ('Rbrace', $lexeme) if $lexeme eq '}';
         return ('Bang',   $lexeme) if $lexeme eq '!';
 
-        return ('ASSIGNMENT_WORD', $lexeme_obj) if ($lexeme =~ /^[A-Za-z0-9_]+=/);
+        if ($lexeme =~ /^[A-Za-z0-9_]+=/) {
+            my $next = $self->{lexer}->lookahead_direct();
+            if ($next eq '(') {
+                $self->{state} = STATE_ARRAY_WAIT_BRACE;
+                return ('ASSIGNMENT_WORD_ARRAY', $lexeme_obj);
+            } else {
+                return ('ASSIGNMENT_WORD', $lexeme_obj);
+            }
+        }
 
         $self->{state} = STATE_COMMAND;
         return ('WORD', $lexeme_obj);

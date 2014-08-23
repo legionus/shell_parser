@@ -340,4 +340,13 @@ sub lookahead {
     }
 }
 
+sub lookahead_direct {
+    my ($self) = @_;
+    if ($self->{current_line} =~ /\G (.) /x) {
+        return $1;
+    } else {
+        return '';
+    }
+}
+
 1;
