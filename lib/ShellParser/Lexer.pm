@@ -4,9 +4,10 @@ use strict;
 use warnings;
 
 use ShellParser::Lexeme;
+use ShellParser::Lexeme::Escaped;
 use ShellParser::Lexeme::LineConcat;
-use ShellParser::Lexeme::QString;
 use ShellParser::Lexeme::QQString;
+use ShellParser::Lexeme::QString;
 use ShellParser::Lexeme::Word;
 
 my @operators = qw(
@@ -86,7 +87,7 @@ sub _get_qq_string {
                 push(@value_parts, ShellParser::Lexeme->new($c . $self->_get_rest_variable()));
             } elsif ($c eq '\\') {
                 if ($$target =~ /\G (.) /gcx) {
-                    push(@value_parts, ShellParser::Lexeme->new($c . $1));
+                    push(@value_parts, ShellParser::Lexeme::Escaped->new($1));
                 } else {
                     $self->{current_line} = $self->{reader}->('token', '"');
                     die "Unexpected end of input while scanning \"...\" string" if !defined($self->{current_line});
@@ -233,7 +234,7 @@ sub _get_word {
             push(@value_parts, ShellParser::Lexeme->new($c . $self->_get_rest_variable()));
         } elsif ($c eq '\\') {
             if ($$target =~ /\G (.) /gcx) {
-                push(@value_parts, ShellParser::Lexeme->new($c . $1));
+                push(@value_parts, ShellParser::Lexeme::Escaped->new($1));
             } else {
                 push(@value_parts, ShellParser::Lexeme::LineConcat->new());
                 $self->{current_line} = $self->{reader}->('token', '\\');
