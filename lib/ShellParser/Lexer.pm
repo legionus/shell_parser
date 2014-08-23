@@ -5,6 +5,7 @@ use warnings;
 
 use ShellParser::Lexeme;
 use ShellParser::Lexeme::LineConcat;
+use ShellParser::Lexeme::QString;
 use ShellParser::Lexeme::Word;
 
 my @operators = qw(
@@ -48,7 +49,7 @@ sub _get_rest_variable {
     return $value;
 }
 
-sub _get_rest_q_string {
+sub _get_q_string {
     my ($self) = @_;
     my $target = \$self->{current_line};
 
@@ -57,7 +58,8 @@ sub _get_rest_q_string {
         $$target =~ /\G ([^']*'|.*) /gcx;
         $value .= $1;
         if ($value =~ /'$/) {
-            return $value;
+            $value =~ s/'$//;
+            return ShellParser::Lexeme::QString->new($value);
         }
 
         $self->{current_line} = $self->{reader}->('token', "'");
@@ -129,22 +131,23 @@ sub _get_rest_c_string {
     while (1) {
         if ($$target =~ /\G (.) /gcx) {
             my $c = $1;
-            $value .= $c;
 
             if ($c eq '}') {
-                return $value;
+                return $value . $c;
             } elsif ($c eq "'") {
-                $value .= $self->_get_rest_q_string();
+                $value .= $self->_get_q_string()->raw_string();  # FIXME
             } elsif ($c eq '"') {
-                $value .= $self->_get_rest_qq_string();
+                $value .= $c . $self->_get_rest_qq_string();
             } elsif ($c eq '\\') {
                 if ($$target =~ /\G (.) /gcx) {
-                    $value .= $1;
+                    $value .= $c . $1;
                 } else {
                     $self->{current_line} = $self->{reader}->('token', '${');
                     die "Unexpected end of input while scanning \${...} string" if !defined($self->{current_line});
-                    $value .= "\n";
+                    $value .= $c . "\n";
                 }
+            } else {
+                $value .= $c;
             }
         } else {
             $self->{current_line} = $self->{reader}->('token', '${');
@@ -167,20 +170,21 @@ sub _get_rest_b_string {
             $value .= $word->as_string();  # FIXME
         } elsif ($$target =~ /\G (.) /gcx) {
             my $c = $1;
-            $value .= $c;
 
             if ($c eq ')') {
-                return $value;
+                return $value . $c;
             } elsif ($c eq "'") {
-                $value .= $self->_get_rest_q_string();
+                $value .= $self->_get_q_string()->raw_string();  # FIXME
             } elsif ($c eq '"') {
-                $value .= $self->_get_rest_qq_string();
+                $value .= $c . $self->_get_rest_qq_string();
             } elsif ($c eq '`') {
-                $value .= $self->_get_rest_qx_string();
+                $value .= $c . $self->_get_rest_qx_string();
             } elsif ($c eq '$') {
-                $value .= $self->_get_rest_variable();
+                $value .= $c . $self->_get_rest_variable();
             } elsif ($c eq '(') {
-                $value .= $self->_get_rest_b_string();
+                $value .= $c . $self->_get_rest_b_string();
+            } else {
+                $value .= $c;
             }
         } else {
             $self->{current_line} = $self->{reader}->('token', '$(');
@@ -201,7 +205,7 @@ sub _get_word {
     while ($$target =~ /\G ([^\s<>()|;&]) /gcx) {
         my $c = $1;
         if ($c eq "'") {
-            push(@value_parts, ShellParser::Lexeme->new($c . $self->_get_rest_q_string()));
+            push(@value_parts, $self->_get_q_string());
         } elsif ($c eq '"') {
             push(@value_parts, ShellParser::Lexeme->new($c . $self->_get_rest_qq_string()));
         } elsif ($c eq '`') {
@@ -239,18 +243,9 @@ sub _get_word {
 
 sub _get_heredoc {
     my ($self, $heredoc_desc) = @_;
-    my $delim = $heredoc_desc->{delim}->as_string();
+    my $delim = $heredoc_desc->{delim}->dequote();
     my $accum_ref = $heredoc_desc->{accum_ref};
     my $strip_tabs = $heredoc_desc->{strip_tabs};
-
-    # FIXME
-    if ($delim =~ /^'(.*)'$/) {
-        $delim = $1;
-    } elsif ($delim =~ /^"(.*)"$/) {
-        $delim = $1;
-    } elsif ($delim =~ /^\\(.*)$/) {
-        $delim = $1;
-    }
 
     while (1) {
         my $line = $self->{reader}->('HEREDOC:' . $delim);

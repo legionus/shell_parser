@@ -18,6 +18,11 @@ sub as_string {
     return join('', map { $_->as_string() } @{$self->{value}});
 }
 
+sub dequote {
+    my ($self) = @_;
+    return join('', map { $_->dequote() } @{$self->{value}});
+}
+
 sub raw_string {
     my ($self) = @_;
     return join('', map { $_->raw_string() } @{$self->{value}});

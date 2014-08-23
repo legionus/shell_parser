@@ -18,6 +18,11 @@ sub as_string {
     return $self->{value};
 }
 
+sub dequote {
+    my ($self) = @_;
+    return $self->as_string();
+}
+
 sub raw_string {
     my ($self) = @_;
     return $self->{value};
