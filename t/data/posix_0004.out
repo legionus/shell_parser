@@ -1,5 +1,5 @@
 List()
-.   AndOrList(sep=# hello)
+.   AndOrList(sep=)
 .   .   first: Pipeline(banged=0)
 .   .   .   SimpleCommand()
 .   .   .   .   prefix: Word()

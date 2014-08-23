@@ -73,10 +73,7 @@ sub _get_next_token {
         return ('NEWLINE', '');
     }
     if ($lexeme =~ /^#/) {
-        if ($self->{state} != STATE_CASE_WAIT_PATTERN) {
-            $self->{state} = STATE_NORMAL;
-        }
-        return ('NEWLINE', $lexeme);
+        return $self->_get_next_token();
     }
     if ($lexeme =~ /^\s*$/) {
         return $self->_get_next_token();
