@@ -39,16 +39,32 @@ sub _get_rest_variable {
     my $target = \$self->{current_line};
 
     my $value = "";
+    while ($$target =~ /\G (\\$) /gcx) {
+        $self->{current_line} = $self->{reader}->('token', '$...');
+        die "Unexpected end of input while scanning \$... string" if !defined($self->{current_line});
+    }
     if ($$target =~ /\G (\() /gcx) {
         $value .= $1;
         $value .= $self->_get_rest_b_string();
-    } elsif ($$target =~ /\G ({) /gcx) {
+        return $value;
+    }
+    if ($$target =~ /\G ({) /gcx) {
         $value .= $1;
         $value .= $self->_get_rest_c_string();
-    } elsif ($$target =~ /\G ($name_re) /gcx) {
-        $value .= $1;
+        return $value;
     }
-    return $value;
+    while (1) {
+        if ($$target =~ /\G ($name_re) /gcx) {
+            $value .= $1;
+        } elsif ($$target =~ /\G (\\$) /gcx) {
+            $self->{current_line} = $self->{reader}->('token', '$...');
+            die "Unexpected end of input while scanning \$... string" if !defined($self->{current_line});
+        } else {
+            return $value;
+        }
+    }
+
+    die "Unreachable code";
 }
 
 sub _get_q_string {
