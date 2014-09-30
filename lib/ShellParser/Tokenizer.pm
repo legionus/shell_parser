@@ -58,10 +58,35 @@ sub got_heredoc {
     $self->{lexer}->got_heredoc($delim, $accum_ref, $strip_tabs);
 }
 
-sub _get_next_token {
+sub _like_a_word {
+    my ($self, $text) = @_;
+    return $text =~ /^[^\s<>()|;&]/;
+}
+
+sub _get_next_lexeme {
     my ($self) = @_;
 
     my $lexeme_obj = $self->{lexer}->get_next_lexeme();
+
+    return $lexeme_obj if !defined($lexeme_obj);
+    return $lexeme_obj if !$self->_like_a_word($lexeme_obj->raw_string());
+
+    my @value_parts = ($lexeme_obj);
+    my $lookahead = $self->{lexer}->lookahead_direct();
+    while ($self->_like_a_word($lookahead)) {
+        $lexeme_obj = $self->{lexer}->get_next_lexeme();
+        last if !defined($lexeme_obj);
+        push(@value_parts, $lexeme_obj);
+        $lookahead = $self->{lexer}->lookahead_direct();
+    }
+
+    return ShellParser::Lexeme::Word->new(\@value_parts);
+}
+
+sub _get_next_token {
+    my ($self) = @_;
+
+    my $lexeme_obj = $self->_get_next_lexeme();
     if (!defined($lexeme_obj)) {
         return ('', undef);
     }

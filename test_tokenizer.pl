@@ -17,6 +17,8 @@ while (1) {
 		last;
 	}
 
+	$value = $value->raw_string() if ref($value);
+	$value =~ s/\n/\\n/g;
 	print "$token, $value\n";
 }
 

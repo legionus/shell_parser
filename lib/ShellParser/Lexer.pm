@@ -232,6 +232,40 @@ sub _get_rest_b_string {
     die "Unreachable code";
 }
 
+sub _get_word_part {
+    my ($self) = @_;
+    my $target = \$self->{current_line};
+
+    my @value_parts;
+
+    if ($$target =~ /\G ([^\s<>()|;&]) /gcx) {
+        my $c = $1;
+        if ($c eq "'") {
+            return $self->_get_q_string();
+        } elsif ($c eq '"') {
+            return $self->_get_qq_string();
+        } elsif ($c eq '`') {
+            return ShellParser::Lexeme->new($c . $self->_get_rest_qx_string());
+        } elsif ($c eq '$') {
+            return ShellParser::Lexeme->new($c . $self->_get_rest_variable());
+        } elsif ($c eq '\\') {
+            if ($$target =~ /\G (.) /gcx) {
+                return ShellParser::Lexeme::Escaped->new($1);
+            } else {
+                $self->{current_line} = $self->{reader}->('token', '\\');
+                die "Unexpected end of input" if !defined($self->{current_line});
+                return ShellParser::Lexeme::LineConcat->new();
+            }
+        } elsif ($$target =~ /\G ([^\s<>()|;&'"`\$\\]+) /gcx) {
+            return ShellParser::Lexeme->new($c . $1);
+        } else {
+            return ShellParser::Lexeme->new($c);
+        }
+    }
+
+    return;
+}
+
 sub _get_word {
     my ($self) = @_;
     my $target = \$self->{current_line};
@@ -335,9 +369,9 @@ sub get_next_lexeme {
             return ShellParser::Lexeme->new($1) if ($$target =~ /\G (\Q$q\E) /gcx);
         }
 
-        my $word = $self->_get_word();
-        if (defined($word)) {
-            return $word;
+        my $word_part = $self->_get_word_part();
+        if (defined($word_part)) {
+            return $word_part;
         }
 
         return ShellParser::Lexeme->new($1) if $$target =~ /\G (.) /gcx;

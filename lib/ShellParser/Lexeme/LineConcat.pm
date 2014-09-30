@@ -15,7 +15,7 @@ sub as_string {
 }
 
 sub raw_string {
-    return "\n";
+    return "\\\n";
 }
 
 sub p_args {
