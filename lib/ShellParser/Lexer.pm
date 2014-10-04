@@ -243,7 +243,7 @@ sub _get_word_part {
         if ($c eq "'") {
             return $self->_get_q_string();
         } elsif ($c eq '"') {
-            return $self->_get_qq_string();
+            return ShellParser::Lexeme->new($c);
         } elsif ($c eq '`') {
             return ShellParser::Lexeme->new($c . $self->_get_rest_qx_string());
         } elsif ($c eq '$') {
