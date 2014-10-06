@@ -72,6 +72,30 @@ sub _get_sub_qq_string {
     $head //= $self->{lexer}->get_next_lexeme();
     return $head if !defined($head);
 
+    if ($head->raw_string() eq '$') {
+        my $name = $self->{lexer}->get_variable_name();
+        if ($name eq '{') {
+            my $content = "";
+            while (my $token = $self->_get_sub_word()) {
+                $content .= $token->raw_string();
+                last if $token->raw_string() eq '}';
+            }
+            return ShellParser::Lexeme->new($head->raw_string() . $name . $content);
+        } elsif ($name eq '(') {
+            my $content = "";
+            my $depth = 1;
+            while (my $token = $self->_get_sub_word()) {
+                $content .= $token->raw_string();
+                $depth += 1 if $token->raw_string eq '(';
+                $depth -= 1 if $token->raw_string eq ')';
+                last if $depth == 0;
+            }
+            return ShellParser::Lexeme->new($head->raw_string() . $name . $content);
+        } else {
+            return ShellParser::Lexeme->new($head->raw_string() . $name);
+        }
+    }
+
     return $head;
 }
 
@@ -104,7 +128,7 @@ sub _get_sub_word {
         return ShellParser::Lexeme::QQString->new(\@qq_value_parts);
     }
 
-    return $head;
+    return $self->_get_sub_qq_string($head);
 }
 
 sub _get_next_lexeme {

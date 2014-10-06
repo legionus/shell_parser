@@ -34,39 +34,6 @@ sub new {
     return bless($self, $class);
 }
 
-sub _get_rest_variable {
-    my ($self) = @_;
-    my $target = \$self->{current_line};
-
-    my $value = "";
-    while ($$target =~ /\G (\\$) /gcx) {
-        $self->{current_line} = $self->{reader}->('token', '$...');
-        die "Unexpected end of input while scanning \$... string" if !defined($self->{current_line});
-    }
-    if ($$target =~ /\G (\() /gcx) {
-        $value .= $1;
-        $value .= $self->_get_rest_b_string();
-        return $value;
-    }
-    if ($$target =~ /\G ({) /gcx) {
-        $value .= $1;
-        $value .= $self->_get_rest_c_string();
-        return $value;
-    }
-    while (1) {
-        if ($$target =~ /\G ($name_re) /gcx) {
-            $value .= $1;
-        } elsif ($$target =~ /\G (\\$) /gcx) {
-            $self->{current_line} = $self->{reader}->('token', '$...');
-            die "Unexpected end of input while scanning \$... string" if !defined($self->{current_line});
-        } else {
-            return $value;
-        }
-    }
-
-    die "Unreachable code";
-}
-
 sub _get_q_string {
     my ($self) = @_;
     my $target = \$self->{current_line};
@@ -83,57 +50,6 @@ sub _get_q_string {
         $self->{current_line} = $self->{reader}->('token', "'");
         die "Unexpected end of input while scanning '...' string" if !defined($self->{current_line});
         $value .= "\n";
-    }
-
-    die "Unreachable code";
-}
-
-sub _get_qq_string {
-    my ($self) = @_;
-    my $target = \$self->{current_line};
-
-    my @value_parts;
-    while (1) {
-        if ($$target =~ /\G (.) /gcx) {
-            my $c = $1;
-
-            if ($c eq '"') {
-                return ShellParser::Lexeme::QQString->new(\@value_parts);
-            } elsif ($c eq '$') {
-                push(@value_parts, ShellParser::Lexeme->new($c . $self->_get_rest_variable()));
-            } elsif ($c eq '\\') {
-                if ($$target =~ /\G (.) /gcx) {
-                    push(@value_parts, ShellParser::Lexeme::Escaped->new($1));
-                } else {
-                    $self->{current_line} = $self->{reader}->('token', '"');
-                    die "Unexpected end of input while scanning \"...\" string" if !defined($self->{current_line});
-                    push(@value_parts, ShellParser::Lexeme::LineConcat->new());
-                }
-            } else {
-                # FIXME
-                my $prev_part = $value_parts[-1];
-                if ($prev_part && $prev_part->{_simple_lexeme}) {
-                    $prev_part->{value} .= $c;
-                } else {
-                    my $lexeme = ShellParser::Lexeme->new($c);
-                    $lexeme->{_simple_lexeme} = 1;
-                    push(@value_parts, $lexeme);
-                }
-            }
-        } else {
-            $self->{current_line} = $self->{reader}->('token', '"');
-            die "Unexpected end of input while scanning \"...\" string" if !defined($self->{current_line});
-
-            # FIXME
-            my $prev_part = $value_parts[-1];
-            if ($prev_part && $prev_part->{_simple_lexeme}) {
-                $prev_part->{value} .= "\n";
-            } else {
-                my $lexeme = ShellParser::Lexeme->new("\n");
-                $lexeme->{_simple_lexeme} = 1;
-                push(@value_parts, $lexeme);
-            }
-        }
     }
 
     die "Unreachable code";
@@ -159,77 +75,37 @@ sub _get_rest_qx_string {
     die "Unreachable code";
 }
 
-sub _get_rest_c_string {
+sub get_variable_name {
     my ($self) = @_;
     my $target = \$self->{current_line};
 
-    my $value = "";
-    while (1) {
-        if ($$target =~ /\G (.) /gcx) {
-            my $c = $1;
+    while ($$target =~ /\G (\\$) /gcx) {
+        $self->{current_line} = $self->{reader}->('token', '$...');
+        die "Unexpected end of input while scanning variable name" if !defined($self->{current_line});
+    }
 
-            if ($c eq '}') {
-                return $value . $c;
-            } elsif ($c eq "'") {
-                $value .= $self->_get_q_string()->raw_string();  # FIXME
-            } elsif ($c eq '"') {
-                $value .= $self->_get_qq_string()->raw_string();  # FIXME
-            } elsif ($c eq '\\') {
-                if ($$target =~ /\G (.) /gcx) {
-                    $value .= $c . $1;
+    if ($$target =~ /\G (\() /gcx) {
+        return $1;
+    }
+
+    if ($$target =~ /\G ([^\s<>()|;&]) /gcx) {
+        my $value = $1;
+        if ($value =~ /^[A-Za-z_]$/) {
+            while (1) {
+                if ($$target =~ /\G ([A-Za-z0-9_]+) /gcx) {
+                    $value .= $1;
+                } elsif ($$target =~ /\G (\\$) /gcx) {
+                    $self->{current_line} = $self->{reader}->('token', '$...');
+                    die "Unexpected end of input while scanning variable name" if !defined($self->{current_line});
                 } else {
-                    $self->{current_line} = $self->{reader}->('token', '${');
-                    die "Unexpected end of input while scanning \${...} string" if !defined($self->{current_line});
-                    $value .= $c . "\n";
+                    return $value;
                 }
-            } else {
-                $value .= $c;
             }
-        } else {
-            $self->{current_line} = $self->{reader}->('token', '${');
-            die "Unexpected end of input while scanning \${...} string" if !defined($self->{current_line});
-            $value .= "\n";
         }
+        return $value;
     }
 
-    die "Unreachable code";
-}
-
-sub _get_rest_b_string {
-    my ($self) = @_;
-    my $target = \$self->{current_line};
-
-    my $value = "";
-    while (1) {
-        my $word = $self->_get_word();
-        if (defined($word)) {
-            $value .= $word->as_string();  # FIXME
-        } elsif ($$target =~ /\G (.) /gcx) {
-            my $c = $1;
-
-            if ($c eq ')') {
-                return $value . $c;
-            } elsif ($c eq "'") {
-                $value .= $self->_get_q_string()->raw_string();  # FIXME
-            } elsif ($c eq '"') {
-                $value .= $self->_get_qq_string()->raw_string();  # FIXME
-            } elsif ($c eq '`') {
-                $value .= $c . $self->_get_rest_qx_string();
-            } elsif ($c eq '$') {
-                $value .= $c . $self->_get_rest_variable();
-            } elsif ($c eq '(') {
-                $value .= $c . $self->_get_rest_b_string();
-            } else {
-                $value .= $c;
-            }
-        } else {
-            $self->{current_line} = $self->{reader}->('token', '$(');
-            die "Unexpected end of input while scanning \$(...) string" if !defined($self->{current_line});
-            $value .= "\n";
-        }
-    }
-
-    die "Unreachable code";
+    return "";
 }
 
 sub _get_word_part {
@@ -247,7 +123,7 @@ sub _get_word_part {
         } elsif ($c eq '`') {
             return ShellParser::Lexeme->new($c . $self->_get_rest_qx_string());
         } elsif ($c eq '$') {
-            return ShellParser::Lexeme->new($c . $self->_get_rest_variable());
+            return ShellParser::Lexeme->new($c);
         } elsif ($c eq '\\') {
             if ($$target =~ /\G (.) /gcx) {
                 return ShellParser::Lexeme::Escaped->new($1);
@@ -264,51 +140,6 @@ sub _get_word_part {
     }
 
     return;
-}
-
-sub _get_word {
-    my ($self) = @_;
-    my $target = \$self->{current_line};
-
-    my @value_parts;
-
-    while ($$target =~ /\G ([^\s<>()|;&]) /gcx) {
-        my $c = $1;
-        if ($c eq "'") {
-            push(@value_parts, $self->_get_q_string());
-        } elsif ($c eq '"') {
-            push(@value_parts, $self->_get_qq_string());
-        } elsif ($c eq '`') {
-            push(@value_parts, ShellParser::Lexeme->new($c . $self->_get_rest_qx_string()));
-        } elsif ($c eq '$') {
-            push(@value_parts, ShellParser::Lexeme->new($c . $self->_get_rest_variable()));
-        } elsif ($c eq '\\') {
-            if ($$target =~ /\G (.) /gcx) {
-                push(@value_parts, ShellParser::Lexeme::Escaped->new($1));
-            } else {
-                push(@value_parts, ShellParser::Lexeme::LineConcat->new());
-                $self->{current_line} = $self->{reader}->('token', '\\');
-                die "Unexpected end of input" if !defined($self->{current_line});
-                $target = \$self->{current_line};
-            }
-        } else {
-            # FIXME
-            my $prev_part = $value_parts[-1];
-            if ($prev_part && $prev_part->{_simple_lexeme}) {
-                $prev_part->{value} .= $c;
-            } else {
-                my $lexeme = ShellParser::Lexeme->new($c);
-                $lexeme->{_simple_lexeme} = 1;
-                push(@value_parts, $lexeme);
-            }
-        }
-    }
-
-    if (@value_parts != 0) {
-        return ShellParser::Lexeme::Word->new(\@value_parts);
-    } else {
-        return;
-    }
 }
 
 sub _get_heredoc {
@@ -383,7 +214,7 @@ sub get_next_lexeme {
 
 sub lookahead {
     my ($self) = @_;
-    if ($self->{current_line} =~ /\G \s*(.) /x) {
+    if ($self->{current_line} =~ /\G \s* (.) /x) {
         return $1;
     } else {
         return '';
