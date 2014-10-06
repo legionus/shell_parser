@@ -132,7 +132,7 @@ sub _get_word_part {
                 die "Unexpected end of input" if !defined($self->{current_line});
                 return ShellParser::Lexeme::LineConcat->new();
             }
-        } elsif ($$target =~ /\G ([^\s<>()|;&'"`\$\\{}]+) /gcx) {
+        } elsif ($c =~ /^[^\s<>()|;&'"`\$\\{}]$/ && $$target =~ /\G ([^\s<>()|;&'"`\$\\{}]+) /gcx) {
             return ShellParser::Lexeme->new($c . $1);
         } else {
             return ShellParser::Lexeme->new($c);
