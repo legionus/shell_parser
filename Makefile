@@ -1,4 +1,4 @@
-ESC=$(shell echo -e "\033")
+ESC=$(shell printf "\033")
 COLOR_RED=$(ESC)[31m
 COLOR_GREEN=$(ESC)[32m
 COLOR_RESET=$(ESC)[0m
@@ -18,8 +18,8 @@ test:
 			else \
 				echo ' output changed'; \
 				diff -du "$${f%.sh}.out" .test.out | \
-					sed -e 's/^+.*/$(COLOR_GREEN)\0$(COLOR_RESET)/' \
-						-e 's/^-.*/$(COLOR_RED)\0$(COLOR_RESET)/' \
+					sed -e 's/^+.*/$(COLOR_GREEN)&$(COLOR_RESET)/' \
+						-e 's/^-.*/$(COLOR_RED)&$(COLOR_RESET)/' \
 					; \
 			fi \
 		else \
