@@ -21,7 +21,9 @@ sub append {
 
 sub p_args {
     my ($self) = @_;
-    return "sep=$self->{sep}";
+    my $sep = $self->{sep};
+    $sep = "" if $sep eq "\n";
+    return "sep=$sep";
 }
 
 sub traverse {

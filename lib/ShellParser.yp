@@ -326,7 +326,10 @@ sub _Error {
 
 sub _Lexer {
     my ($parser) = shift;
-    return $parser->YYData->{LEXER}->_get_next_token();
+    while (1) {
+        my ($token, $value) = $parser->YYData->{LEXER}->_get_next_token();
+        return ($token, $value) if $token ne 'BLANK';
+    }
 }
 
 sub parse {

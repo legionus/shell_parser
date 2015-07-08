@@ -83,13 +83,26 @@ sub _get_sub_qq_string {
             return ShellParser::Lexeme->new($head->raw_string() . $name . $content);
         } elsif ($name eq '(') {
             my $content = "";
-            my $depth = 1;
-            while (my $token = $self->_get_sub_word()) {
-                $content .= $token->raw_string();
-                $depth += 1 if $token->raw_string eq '(';
-                $depth -= 1 if $token->raw_string eq ')';
-                last if $depth == 0;
+
+            my $old_state = $self->{state};
+            $self->{state} = STATE_NORMAL;
+
+            my $prev_state = $self->{state};
+            while (my ($token, $value) = $self->_get_next_token()) {
+                if ($token eq '') {
+                    die "Unexpected end of data";
+                }
+                # TODO(dmage): there shouldn't be two kind of values.
+                if (ref($value) ne '') {
+                    $value = $value->as_string();
+                }
+                $content .= $value;
+                last if $prev_state == STATE_NORMAL && $value eq ')';
+                $prev_state = $self->{state};
             }
+
+            $self->{state} = $old_state;
+
             return ShellParser::Lexeme->new($head->raw_string() . $name . $content);
         } else {
             return ShellParser::Lexeme->new($head->raw_string() . $name);
@@ -166,14 +179,14 @@ sub _get_next_token {
         if ($self->{state} != STATE_CASE_WAIT_PATTERN) {
             $self->{state} = STATE_NORMAL;
         }
-        return ('NEWLINE', '');
+        return ('NEWLINE', $lexeme);
     }
 
     if ($lexeme =~ /^#/) {
-        return $self->_get_next_token();
+        return ('BLANK', $lexeme)
     }
     if ($lexeme =~ /^\s*$/) {
-        return $self->_get_next_token();
+        return ('BLANK', $lexeme)
     }
 
     foreach my $op (keys %operators) {

@@ -1,0 +1,8 @@
+List()
+.   AndOrList(sep=)
+.   .   first: Pipeline(banged=0)
+.   .   .   SimpleCommand()
+.   .   .   .   name: Word()
+.   .   .   .   .   Lexeme(echo)
+.   .   .   .   argument: Word()
+.   .   .   .   .   Lexeme($<OPEN>case 1 in *<CLOSE> echo hello;; esac<CLOSE>)
