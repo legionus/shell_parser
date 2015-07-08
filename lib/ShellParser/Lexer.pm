@@ -84,7 +84,7 @@ sub get_variable_name {
         die "Unexpected end of input while scanning variable name" if !defined($self->{current_line});
     }
 
-    if ($$target =~ /\G (\() /gcx) {
+    if ($$target =~ /\G (\(\(?) /gcx) {
         return $1;
     }
 

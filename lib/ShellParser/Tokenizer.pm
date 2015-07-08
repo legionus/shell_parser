@@ -81,12 +81,20 @@ sub _get_sub_qq_string {
                 last if $token->raw_string() eq '}';
             }
             return ShellParser::Lexeme->new($head->raw_string() . $name . $content);
+        } elsif ($name eq '((') {
+            my $content = "";
+            my $depth = 2;
+            while (my $token = $self->_get_sub_word()) {
+                $content .= $token->raw_string();
+                $depth += 1 if $token->raw_string eq '(';
+                $depth -= 1 if $token->raw_string eq ')';
+                last if $depth == 0;
+            }
+            return ShellParser::Lexeme->new($head->raw_string() . $name . $content);
         } elsif ($name eq '(') {
             my $content = "";
-
             my $old_state = $self->{state};
             $self->{state} = STATE_NORMAL;
-
             my $prev_state = $self->{state};
             while (my ($token, $value) = $self->_get_next_token()) {
                 if ($token eq '') {
@@ -100,9 +108,7 @@ sub _get_sub_qq_string {
                 last if $prev_state == STATE_NORMAL && $value eq ')';
                 $prev_state = $self->{state};
             }
-
             $self->{state} = $old_state;
-
             return ShellParser::Lexeme->new($head->raw_string() . $name . $content);
         } else {
             return ShellParser::Lexeme->new($head->raw_string() . $name);
