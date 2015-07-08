@@ -105,7 +105,7 @@ sub _get_sub_qq_string {
                     $value = $value->as_string();
                 }
                 $content .= $value;
-                last if $prev_state == STATE_NORMAL && $value eq ')';
+                last if ($prev_state == STATE_NORMAL || $prev_state == STATE_COMMAND) && $value eq ')';
                 $prev_state = $self->{state};
             }
             $self->{state} = $old_state;
