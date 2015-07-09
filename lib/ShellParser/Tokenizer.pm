@@ -60,6 +60,7 @@ sub got_heredoc {
 
 use ShellParser::Lexeme::QQString;
 use ShellParser::Lexeme::Word;
+use ShellParser::Lexeme::HereDoc;
 
 sub _like_a_word {
     my ($self, $text) = @_;
@@ -172,6 +173,14 @@ sub _get_next_lexeme {
     return $lexeme_obj;
 }
 
+sub _get_next_non_blank_token {
+    my ($self) = @_;
+    while (1) {
+        my ($token, $value) = $self->_get_next_token();
+        return ($token, $value) if $token ne 'BLANK';
+    }
+}
+
 sub _get_next_token {
     my ($self) = @_;
 
@@ -204,6 +213,17 @@ sub _get_next_token {
                 if ($self->{state} == STATE_COMMAND) {
                     $self->{state} = STATE_NORMAL;
                 }
+            }
+            if ($op eq '<<' || $op eq '<<-') {
+                my ($type, $here_end) = $self->_get_next_non_blank_token();
+                if ($type ne 'WORD') {
+                    die "Expected WORD, got $type";
+                }
+
+                my $r = ShellParser::Lexeme::HereDoc->new($op, $here_end);
+                my $strip_tabs = ($op eq '<<-');
+                $self->{lexer}->got_heredoc($here_end, \$r->{value}, $strip_tabs);
+                return ('IO_HERE', $r)
             }
             return ($operators{$op}, $lexeme);
         }

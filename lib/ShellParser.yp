@@ -10,7 +10,6 @@ use ShellParser::Token::CompoundCommand;
 use ShellParser::Token::DoGroup;
 use ShellParser::Token::For;
 use ShellParser::Token::FuncDef;
-use ShellParser::Token::HereDoc;
 use ShellParser::Token::If;
 use ShellParser::Token::List;
 use ShellParser::Token::Pipeline;
@@ -26,6 +25,7 @@ use ShellParser::Token::While;
 %token  ASSIGNMENT_WORD
 %token  NEWLINE
 %token  IO_NUMBER
+%token  IO_HERE
 
 
 %token  AND_IF    OR_IF    DSEMI
@@ -285,10 +285,7 @@ filename         : WORD                      /* Apply rule 2 */
                  | IO_NUMBER
                  { ShellParser::Lexeme->new($_[1]) }
                  ;
-io_here          : DLESS     here_end
-                 { my $r = ShellParser::Token::HereDoc->new($_[1], $_[2]); $_[0]->{USER}->{LEXER}->got_heredoc($_[2], \$r->{value}, 0); $r }
-                 | DLESSDASH here_end
-                 { my $r = ShellParser::Token::HereDoc->new($_[1], $_[2]); $_[0]->{USER}->{LEXER}->got_heredoc($_[2], \$r->{value}, 1); $r }
+io_here          : IO_HERE
                  ;
 here_end         : WORD                      /* Apply rule 3 */
                  ;
@@ -326,10 +323,7 @@ sub _Error {
 
 sub _Lexer {
     my ($parser) = shift;
-    while (1) {
-        my ($token, $value) = $parser->YYData->{LEXER}->_get_next_token();
-        return ($token, $value) if $token ne 'BLANK';
-    }
+    return $parser->YYData->{LEXER}->_get_next_non_blank_token();
 }
 
 sub parse {
