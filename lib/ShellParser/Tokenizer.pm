@@ -67,7 +67,7 @@ sub _like_a_word {
     return $text =~ /^[^\s<>()|;&]/;
 }
 
-sub _get_sub_qq_string {
+sub _get_qq_string_part {
     my ($self, $head) = @_;
 
     $head //= $self->{lexer}->get_next_lexeme();
@@ -77,7 +77,7 @@ sub _get_sub_qq_string {
         my $name = $self->{lexer}->get_variable_name();
         if ($name eq '{') {
             my $content = "";
-            while (my $token = $self->_get_sub_word()) {
+            while (my $token = $self->_get_word_part()) {
                 $content .= $token->raw_string();
                 last if $token->raw_string() eq '}';
             }
@@ -85,7 +85,7 @@ sub _get_sub_qq_string {
         } elsif ($name eq '((') {
             my $content = "";
             my $depth = 2;
-            while (my $token = $self->_get_sub_word()) {
+            while (my $token = $self->_get_word_part()) {
                 $content .= $token->raw_string();
                 $depth += 1 if $token->raw_string eq '(';
                 $depth -= 1 if $token->raw_string eq ')';
@@ -119,7 +119,7 @@ sub _get_sub_qq_string {
     return $head;
 }
 
-sub _get_sub_word {
+sub _get_word_part {
     my ($self, $head) = @_;
 
     $head //= $self->{lexer}->get_next_lexeme();
@@ -129,7 +129,7 @@ sub _get_sub_word {
         my @qq_value_parts = ();
         my $str = "";
         while (1) {
-            my $lexeme_obj = $self->_get_sub_qq_string();
+            my $lexeme_obj = $self->_get_qq_string_part();
             die "Unexpected end of \"...\" string" if !defined($lexeme_obj);
             last if $lexeme_obj->raw_string() eq '"';
             if (
@@ -148,7 +148,7 @@ sub _get_sub_word {
         return ShellParser::Lexeme::QQString->new(\@qq_value_parts);
     }
 
-    return $self->_get_sub_qq_string($head);
+    return $self->_get_qq_string_part($head);
 }
 
 sub _get_next_lexeme {
@@ -159,10 +159,10 @@ sub _get_next_lexeme {
     return $lexeme_obj if !defined($lexeme_obj);
 
     if ($self->_like_a_word($lexeme_obj->raw_string())) {
-        my @value_parts = ($self->_get_sub_word($lexeme_obj));
+        my @value_parts = ($self->_get_word_part($lexeme_obj));
         my $lookahead = $self->{lexer}->lookahead_direct();
         while ($self->_like_a_word($lookahead)) {
-            $lexeme_obj = $self->_get_sub_word();
+            $lexeme_obj = $self->_get_word_part();
             last if !defined($lexeme_obj);
             push(@value_parts, $lexeme_obj);
             $lookahead = $self->{lexer}->lookahead_direct();
