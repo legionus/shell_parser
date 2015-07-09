@@ -55,26 +55,6 @@ sub _get_q_string {
     die "Unreachable code";
 }
 
-sub _get_rest_qx_string {
-    my ($self) = @_;
-    my $target = \$self->{current_line};
-
-    my $value = "";
-    while (1) {
-        $$target =~ /\G ([^`]*`|.*) /gcx;
-        $value .= $1;
-        if ($value =~ /`$/) {
-            return $value;
-        }
-
-        $self->{current_line} = $self->{reader}->('token', '`');
-        die "Unexpected end of input while scanning `...` string" if !defined($self->{current_line});
-        $value .= "\n";
-    }
-
-    die "Unreachable code";
-}
-
 sub get_variable_name {
     my ($self) = @_;
     my $target = \$self->{current_line};
@@ -121,7 +101,7 @@ sub _get_word_part {
         } elsif ($c eq '"') {
             return ShellParser::Lexeme->new($c);
         } elsif ($c eq '`') {
-            return ShellParser::Lexeme->new($c . $self->_get_rest_qx_string());
+            return ShellParser::Lexeme->new($c);
         } elsif ($c eq '$') {
             return ShellParser::Lexeme->new($c);
         } elsif ($c eq '\\') {

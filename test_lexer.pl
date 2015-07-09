@@ -50,7 +50,7 @@ while (1) {
 	my $lexeme = $lex->get_next_lexeme();
     last if !defined($lexeme);
 
-    my ($first_part, @parts) = split(/\n/, $lexeme, -1);
+    my ($first_part, @parts) = split(/\n/, $lexeme->raw_string(), -1);
     $ind = "^";
     concat($first_part);
     foreach my $part (@parts) {
