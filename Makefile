@@ -9,7 +9,7 @@ all:
 
 test:
 	@! test -e .test.out || { echo 'Please, remove .test.out first' && exit 1; }
-	@find t/ -name '*.sh' | sort | while read -r f; \
+	@find t -name '*.sh' | sort | while read -r f; \
 	do \
 		printf "%s" "$$f"; \
 		if ./test_parser.pl "$$f" 1>.test.out; then \
