@@ -34,6 +34,27 @@ sub new {
     return bless($self, $class);
 }
 
+sub get_q_string {
+    my ($self) = @_;
+    my $target = \$self->{current_line};
+
+    my $value = "";
+    while (1) {
+        $$target =~ /\G ([^']*'|.*) /gcx;
+        $value .= $1;
+        if ($value =~ /'$/) {
+            $value =~ s/'$//;
+            return ShellParser::Lexeme::QString->new($value);
+        }
+
+        $self->{current_line} = $self->{reader}->('token', "'");
+        die "Unexpected end of input while scanning '...' string" if !defined($self->{current_line});
+        $value .= "\n";
+    }
+
+    die "Unreachable code";
+}
+
 sub get_variable_name {
     my ($self) = @_;
     my $target = \$self->{current_line};
@@ -136,14 +157,12 @@ sub got_heredoc {
 }
 
 sub get_next_lexeme {
-    my ($self, $allow_heredoc) = @_;
+    my ($self) = @_;
 
     if (!defined($self->{current_line})) {
-        if ($allow_heredoc) {
-            while (@{$self->{heredoc}} != 0) {
-                my $heredoc_desc = shift(@{$self->{heredoc}});
-                $self->_get_heredoc($heredoc_desc);
-            }
+        while (@{$self->{heredoc}} != 0) {
+            my $heredoc_desc = shift(@{$self->{heredoc}});
+            $self->_get_heredoc($heredoc_desc);
         }
         $self->{current_line} = $self->{reader}->('new');
     }
@@ -169,7 +188,7 @@ sub get_next_lexeme {
         return ShellParser::Lexeme->new($1) if $$target =~ /\G (.) /gcx;
 
         $self->{current_line} = undef;
-        return $self->get_next_lexeme($allow_heredoc);
+        return $self->get_next_lexeme();
     }
 }
 

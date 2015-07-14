@@ -70,7 +70,7 @@ sub _like_a_word {
 sub _get_qq_string_part {
     my ($self, $head) = @_;
 
-    $head //= $self->{lexer}->get_next_lexeme(1);
+    $head //= $self->{lexer}->get_next_lexeme();
     return $head if !defined($head);
 
     if ($head->raw_string() eq '$') {
@@ -120,7 +120,7 @@ sub _get_qq_string_part {
     if ($head->raw_string() eq '`') {
         my $content = "";
         while (1) {
-            my $token = $self->{lexer}->get_next_lexeme(1);
+            my $token = $self->{lexer}->get_next_lexeme();
             if (!defined($token)) {
                 die "Expected '`', got EOF";
             }
@@ -136,7 +136,7 @@ sub _get_qq_string_part {
 sub _get_word_part {
     my ($self, $head) = @_;
 
-    $head //= $self->{lexer}->get_next_lexeme(1);
+    $head //= $self->{lexer}->get_next_lexeme();
     return $head if !defined($head);
 
     if ($head->raw_string() eq '"') {
@@ -161,15 +161,9 @@ sub _get_word_part {
         push(@qq_value_parts, ShellParser::Lexeme->new($str)) if $str;
         return ShellParser::Lexeme::QQString->new(\@qq_value_parts);
     }
+
     if ($head->raw_string() eq "'") {
-        my $str = "";
-        while (1) {
-            my $lexeme_obj = $self->{lexer}->get_next_lexeme(0);
-            die "Unexpected end of \'...\' string" if !defined($lexeme_obj);
-            last if $lexeme_obj->raw_string() eq "'";
-            $str .= $lexeme_obj->raw_string();
-        }
-        return ShellParser::Lexeme::QString->new($str);
+        return $self->{lexer}->get_q_string();
     }
 
     return $self->_get_qq_string_part($head);
@@ -178,7 +172,7 @@ sub _get_word_part {
 sub _get_next_lexeme {
     my ($self) = @_;
 
-    my $lexeme_obj = $self->{lexer}->get_next_lexeme(1);
+    my $lexeme_obj = $self->{lexer}->get_next_lexeme();
 
     return $lexeme_obj if !defined($lexeme_obj);
 
@@ -208,7 +202,7 @@ sub _get_next_non_blank_token {
 sub _get_next_token {
     my ($self) = @_;
 
-    my $lexeme_obj = $self->_get_next_lexeme(1);
+    my $lexeme_obj = $self->_get_next_lexeme();
     if (!defined($lexeme_obj)) {
         return ('', undef);
     }
