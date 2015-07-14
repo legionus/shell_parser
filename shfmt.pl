@@ -160,7 +160,7 @@ sub dump_while {
 	push(@{$childs}, "while " . print_token($cond_indent, $token->{condition}));
 
 	push(@{$childs}, print_token($indent+0, $token->{body}));
-	return join("\n", @{$childs});
+	return join(" ", @{$childs});
 }
 
 sub dump_until {
@@ -174,7 +174,7 @@ sub dump_until {
 	push(@{$childs}, "until " . print_token($cond_indent, $token->{condition}));
 
 	push(@{$childs}, print_token($indent+0, $token->{body}));
-	return join("\n", @{$childs});
+	return join(" ", @{$childs});
 }
 
 sub dump_dogroup {
