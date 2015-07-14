@@ -3,8 +3,6 @@
 use strict;
 use warnings;
 
-use Switch;
-
 use ShellParser;
 use ShellParser::Indent;
 
@@ -257,6 +255,28 @@ sub dump_funcdef {
 	return join("\n", @{$childs});
 }
 
+my $dumper = {
+	Lexeme          => \&dump_lexeme,
+	Word            => \&dump_lexeme,
+	QString         => \&dump_lexeme,
+	QQString        => \&dump_lexeme,
+	LineConcat      => \&dump_lexeme,
+	List            => \&dump_list,
+	AndOrList       => \&dump_andorlist,
+	Pipeline        => \&dump_pipeline,
+	SimpleCommand   => \&dump_simplecommand,
+	CompoundCommand => \&dump_compoundcommand,
+	If              => \&dump_if,
+	For             => \&dump_for,
+	DoGroup         => \&dump_dogroup,
+	FuncDef         => \&dump_funcdef,
+	BraceGroup      => \&dump_bracegroup,
+	Case            => \&dump_case,
+	CaseItem        => \&dump_caseitem,
+	Redirection     => \&dump_redirection,
+	While           => \&dump_while,
+	Until           => \&dump_until,
+};
 
 sub print_token {
 	my ($indent, $token) = @_;
@@ -264,25 +284,9 @@ sub print_token {
 	my $type = ref($token);
 	$type =~ s/.*:://;
 
-	switch ($type) {
-		case /^(Lexeme|Word|QString|QQString|LineConcat)$/ {
-		                         return dump_lexeme($indent, $token);          }
-		case "List"            { return dump_list($indent, $token);            }
-		case "AndOrList"       { return dump_andorlist($indent, $token);       }
-		case "Pipeline"        { return dump_pipeline($indent, $token);        }
-		case "SimpleCommand"   { return dump_simplecommand($indent, $token);   }
-		case "CompoundCommand" { return dump_compoundcommand($indent, $token); }
-		case "If"              { return dump_if($indent, $token);              }
-		case "For"             { return dump_for($indent, $token);             }
-		case "DoGroup"         { return dump_dogroup($indent, $token);         }
-		case "FuncDef"         { return dump_funcdef($indent, $token);         }
-		case "BraceGroup"      { return dump_bracegroup($indent, $token);      }
-		case "Case"            { return dump_case($indent, $token);            }
-		case "CaseItem"        { return dump_caseitem($indent, $token);        }
-		case "Redirection"     { return dump_redirection($indent, $token);     }
-		case "While"           { return dump_while($indent, $token);           }
-		case "Until"           { return dump_until($indent, $token);           }
-	}
+	my $func = $dumper->{$type} || 0;
+
+	return $func->($indent, $token) if $func;
 	return "NOT-IMPLEMENTED ($type)";
 }
 
