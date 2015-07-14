@@ -119,7 +119,11 @@ sub _get_qq_string_part {
 
     if ($head->raw_string() eq '`') {
         my $content = "";
-        while (my $token = $self->{lexer}->get_next_lexeme(1)) {
+        while (1) {
+            my $token = $self->{lexer}->get_next_lexeme(1);
+            if (!defined($token)) {
+                die "Expected '`', got EOF";
+            }
             $content .= $token->raw_string();
             last if $token->raw_string() eq '`';
         }
@@ -140,7 +144,7 @@ sub _get_word_part {
         my $str = "";
         while (1) {
             my $lexeme_obj = $self->_get_qq_string_part();
-            die "Unexpected end of \"...\" string" if !defined($lexeme_obj);
+            die "Expected '\"', got EOF" if !defined($lexeme_obj);
             last if $lexeme_obj->raw_string() eq '"';
             if (
                 $lexeme_obj->isa("ShellParser::Lexeme::LineConcat") ||
