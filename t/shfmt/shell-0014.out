@@ -1,0 +1,13 @@
+cat <<EOF1
+xxx
+EOF1
+cat <<EOF2
+yyy
+EOF2
+printf "%s" 'aaa
+bbb
+EOF1
+ccc
+EOF2
+ddd
+'

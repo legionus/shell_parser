@@ -1,0 +1,6 @@
+cat <<eof1
+Hi,
+eof1
+cat <<eof2
+Helene.
+eof2

@@ -1,0 +1,5 @@
+if cat <<EOF | grep -iqs foo; then
+FOO
+EOF
+	echo OK
+fi
