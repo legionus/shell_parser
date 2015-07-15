@@ -126,10 +126,6 @@ sub dump_compoundcommand {
 
 	my $s = join(" ", @{$childs});
 
-	while (my $heredoc = shift @{$context->{heredoc}}) {
-		$s .= "\n" . $heredoc->{value} . $heredoc->{here_end};
-	}
-
 	return $s;
 }
 
