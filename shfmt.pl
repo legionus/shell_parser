@@ -7,30 +7,43 @@ use ShellParser;
 use ShellParser::Indent;
 
 sub dump_lexeme {
-	my ($indent, $token) = @_;
+	my ($context, $indent, $token) = @_;
 	return $token->as_string();
 }
 
 sub dump_list {
-	my ($indent, $token) = @_;
+	my ($context, $indent, $token) = @_;
 
-	my $childs = [ map { print_token($indent+0, $_) } @{$token->{body}} ];
+	my $childs = [ map { print_token($context, $indent+0, $_) } @{$token->{body}} ];
 	my $delim = $indent->{condition} ? " " : "\n";
 
-	return join($delim, @{$childs});
+	my $s = "";
+	if (!$indent->{condition}) {
+		while (my $heredoc = shift @{$context->{heredoc}}) {
+			$s .= "\n" . $heredoc->{value} . $heredoc->{here_end};
+		}
+	}
+
+	return join($delim, @{$childs}) . $s;
 }
 
 sub dump_andorlist {
-	my ($indent, $token) = @_;
+	my ($context, $indent, $token) = @_;
+	my $childs = [ $indent . print_token($context, $indent+0, $token->{first}) ];
 
-	my $childs = [ $indent . print_token($indent+0, $token->{first}) ];
+	my $delim = "\n";
+	my $rest_indent = $indent->clone();
+	$rest_indent++;
+
+	#if ($indent->{condition}) {
+	#	$rest_indent->{indent} = "";
+	#	$delim = " ";
+	#}
 
 	foreach my $elem (@{$token->{rest}}) {
 		$childs->[-1] .= " " . ($elem->[0] // "");
-		push(@{$childs}, ($indent + 1) . print_token($indent+0, $elem->[1]));
+		push(@{$childs}, $rest_indent . print_token($context, $indent+0, $elem->[1]));
 	}
-
-	my $delim = $indent->{condition} ? " " : "\n";
 
 	if ($indent->{condition} && $token->{sep} eq "\n") {
 		$token->{sep} = ";";
@@ -46,80 +59,112 @@ sub dump_andorlist {
 		}
 	}
 
+	if ($context->{andorlist_ignore_sep}) {
+		$context->{andorlist_ignore_sep} = 0;
+		$sep = "";
+	}
+
 	my $s = join($delim, @{$childs}) . $sep;
 
 	return $s;
 }
 
 sub dump_pipeline {
-	my ($indent, $token) = @_;
+	my ($context, $indent, $token) = @_;
+
 	my $pipe_indent = $indent->clone();
+	if (@{$token->{body}} > 1) {
+		$pipe_indent->{heredoc_split} = 1;
+	}
 
 	my $childs = [];
 	foreach my $a (@{$token->{body}}) {
 		my $tailing_space = ((@{$token->{body}} - @{$childs}) == 1 ? "" : " ");
 
-		push(@$childs, print_token($pipe_indent+0, $a) . $tailing_space);
+		push(@$childs, print_token($context, $pipe_indent+0, $a) . $tailing_space);
 		$pipe_indent->{depth} = 0;
 	}
 
 	my $s = ($token->{banged} ? "! " : "") . join("| ", @{$childs});
-
 	return $s;
 }
 
 sub dump_redirection {
-	my ($indent, $token) = @_;
+	my ($context, $indent, $token) = @_;
 
 	my $redirection_indent = $indent->clone();
 	$redirection_indent->{depth} = 0;
 
 	return ($token->{left} // "") .
 		$token->{redirection} .
-		print_token($redirection_indent, $token->{filename});
+		print_token($context, $redirection_indent, $token->{filename});
 }
 
 sub dump_simplecommand {
-	my ($indent, $token) = @_;
+	my ($context, $indent, $token) = @_;
 
-	my $prefix = [ map { print_token($indent+0, $_) } @{$token->{prefix}} ];
-	my $args   = [ map { print_token($indent+0, $_) } @{$token->{args}}   ];
+	my $prefix = [ map { print_token($context, $indent+0, $_) } @{$token->{prefix}} ];
+	my $args   = [ map { print_token($context, $indent+0, $_) } @{$token->{args}}   ];
 
 	my @cmd;
-	push(@cmd, join(" ", @{$prefix}))                  if @{$prefix};
-	push(@cmd, print_token($indent+0, $token->{name})) if $token->{name};
-	push(@cmd, join(" ", @{$args}))                    if @{$args};
+	push(@cmd, join(" ", @{$prefix}))                            if @{$prefix};
+	push(@cmd, print_token($context, $indent+0, $token->{name})) if $token->{name};
+	push(@cmd, join(" ", @{$args}))                              if @{$args};
 
 	my $s = join(" ", @cmd);
+
 	return $s;
 }
 
 sub dump_compoundcommand {
-	my ($indent, $token) = @_;
-	my $childs = [ print_token($indent+0, $token->{body}) ];
-	return join(" ", @{$childs});
+	my ($context, $indent, $token) = @_;
+	my $childs = [ print_token($context, $indent+0, $token->{body}) ];
+
+	foreach my $elem (@{$token->{redirect}}) {
+		push(@{$childs}, print_token($context, $indent+0, $elem));
+	}
+
+	my $s = join(" ", @{$childs});
+
+	while (my $heredoc = shift @{$context->{heredoc}}) {
+		$s .= "\n" . $heredoc->{value} . $heredoc->{here_end};
+	}
+
+	return $s;
+}
+
+sub dump_condition {
+	my ($context, $indent, $token) = @_;
+
+	my $cond_indent = $indent->clone();
+	$cond_indent->{condition}     = 1;
+	$cond_indent->{heredoc_split} = 1;
+	$cond_indent->{depth}         = 0;
+
+	return print_token($context, $cond_indent, $token);
 }
 
 sub dump_if {
-	my ($indent, $token) = @_;
+	my ($context, $indent, $token) = @_;
 	my $childs = [];
 	foreach my $body (@{$token->{body}}) {
 		if ($body->{condition}) {
-			my $cond_indent = $indent->clone();
-			$cond_indent->{condition} = 1;
-			$cond_indent->{depth} = 0;
-
-			my $condition = [];
-			push(@{$condition}, (!@{$childs} ? "if" : $indent . "elif"));
-			push(@{$condition}, print_token($cond_indent, $body->{condition}));
-			push(@{$condition}, "then");
-
+			my $condition = [
+				(!@{$childs} ? "if" : $indent . "elif"),
+				dump_condition($context, $indent, $body->{condition}),
+				"then",
+			];
 			push(@{$childs}, join(" ", @{$condition}));
-			push(@{$childs}, print_token($indent+1, $body->{body}));
+
+			while (my $heredoc = shift @{$context->{heredoc}}) {
+				push(@{$childs}, $heredoc->{value} . $heredoc->{here_end});
+			}
+
+			push(@{$childs}, print_token($context, $indent+1, $body->{body}));
 		}
 		else {
 			push(@{$childs}, $indent . "else");
-			push(@{$childs}, print_token($indent+1, $body->{body}));
+			push(@{$childs}, print_token($context, $indent+1, $body->{body}));
 		}
 	}
 	push(@{$childs}, $indent . "fi");
@@ -127,75 +172,65 @@ sub dump_if {
 }
 
 sub dump_for {
-	my ($indent, $token) = @_;
-	my $childs = [];
+	my ($context, $indent, $token) = @_;
+	my $childs = [ "for" ];
 
 	my $var_indent = $indent->clone();
 	$var_indent->{depth} = 0;
 
-	push(@{$childs}, "for");
-	push(@{$childs}, print_token($var_indent, $token->{variable}));
+	push(@{$childs}, print_token($context, $var_indent, $token->{variable}));
 
 	my $words_indent = $indent->clone();
 	$words_indent->{depth} = 0;
 
-	my $words = [ map { print_token($words_indent, $_) } @{$token->{words}} ];
+	my $words = [ map { print_token($context, $words_indent, $_) } @{$token->{words}} ];
 	if (@{$words}) {
 		push(@{$childs}, "in");
 		push(@{$childs}, join(" ", @{$words}) . ";");
 	}
 
-	push(@{$childs}, print_token($indent+0, $token->{body}));
+	push(@{$childs}, print_token($context, $indent+0, $token->{body}));
 	return join(" ", @{$childs});
 }
 
 sub dump_while {
-	my ($indent, $token) = @_;
-	my $childs = [];
-
-	my $cond_indent = $indent->clone();
-	$cond_indent->{condition} = 1;
-	$cond_indent->{depth} = 0;
-
-	push(@{$childs}, "while " . print_token($cond_indent, $token->{condition}));
-
-	push(@{$childs}, print_token($indent+0, $token->{body}));
+	my ($context, $indent, $token) = @_;
+	my $childs = [ "while" ];
+	push(@{$childs}, dump_condition($context, $indent, $token->{condition}));
+	push(@{$childs}, print_token($context, $indent+0, $token->{body}));
 	return join(" ", @{$childs});
 }
 
 sub dump_until {
-	my ($indent, $token) = @_;
-	my $childs = [];
-
-	my $cond_indent = $indent->clone();
-	$cond_indent->{condition} = 1;
-	$cond_indent->{depth} = 0;
-
-	push(@{$childs}, "until " . print_token($cond_indent, $token->{condition}));
-
-	push(@{$childs}, print_token($indent+0, $token->{body}));
+	my ($context, $indent, $token) = @_;
+	my $childs = [ "until" ];
+	push(@{$childs}, dump_condition($context, $indent, $token->{condition}));
+	push(@{$childs}, print_token($context, $indent+0, $token->{body}));
 	return join(" ", @{$childs});
 }
 
 sub dump_dogroup {
-	my ($indent, $token) = @_;
+	my ($context, $indent, $token) = @_;
 	my $childs = [];
 	push(@{$childs}, "do");
-	push(@{$childs}, print_token($indent+1, $token->{body}));
+	while (my $heredoc = shift @{$context->{heredoc}}) {
+		push(@{$childs}, $heredoc->{value} . $heredoc->{here_end});
+	}
+	push(@{$childs}, print_token($context, $indent+1, $token->{body}));
 	push(@{$childs}, $indent . "done");
 	return join("\n", @{$childs});
 }
 
 sub dump_case {
-	my ($indent, $token) = @_;
+	my ($context, $indent, $token) = @_;
 	my $childs = [];
 
 	my $var_indent = $indent->clone();
 	$var_indent->{depth} = 0;
 
-	push(@{$childs}, "case " . print_token($var_indent, $token->{word}) . " in");
+	push(@{$childs}, "case " . print_token($context, $var_indent, $token->{word}) . " in");
 	foreach my $item (@{$token->{items}}) {
-		push(@{$childs}, print_token($indent+1, $item));
+		push(@{$childs}, print_token($context, $indent+1, $item));
 	}
 	push(@{$childs}, $indent . "esac");
 
@@ -203,7 +238,7 @@ sub dump_case {
 }
 
 sub dump_caseitem {
-	my ($indent, $token) = @_;
+	my ($context, $indent, $token) = @_;
 	my $childs   = [];
 	my $patterns = [];
 
@@ -213,12 +248,12 @@ sub dump_caseitem {
 
 		push(@{$patterns}, "|")
 			if @{$patterns};
-		push(@{$patterns}, print_token($pattern_indent, $pattern));
+		push(@{$patterns}, print_token($context, $pattern_indent, $pattern));
 	}
 
 	push(@{$childs}, $indent . "(" .  join("", @{$patterns}) . ")");
 
-	push(@{$childs}, print_token($indent+1, $token->{body}))
+	push(@{$childs}, print_token($context, $indent+1, $token->{body}))
 		if $token->{body};
 
 	push(@{$childs}, ($indent+1) . ";;");
@@ -227,16 +262,16 @@ sub dump_caseitem {
 }
 
 sub dump_bracegroup {
-	my ($indent, $token) = @_;
+	my ($context, $indent, $token) = @_;
 	my $childs = [];
 	push(@{$childs}, "{");
-	push(@{$childs}, print_token($indent+1, $token->{body}));
+	push(@{$childs}, print_token($context, $indent+1, $token->{body}));
 	push(@{$childs}, $indent . "}");
 	return join("\n", @{$childs});
 }
 
 sub dump_funcdef {
-	my ($indent, $token) = @_;
+	my ($context, $indent, $token) = @_;
 	my $childs = [];
 
 	my $name_indent = $indent->clone();
@@ -244,14 +279,37 @@ sub dump_funcdef {
 
 	my @redir;
 	foreach my $redirect (@{$token->{redirect}}) {
-		push(@redir, print_token($indent+0, $redirect));
+		push(@redir, print_token($context, $indent+0, $redirect));
 	}
 
-	my $body = print_token($indent+0, $token->{body});
+	my $body = print_token($context, $indent+0, $token->{body});
 	$body .= " " . join(" ", @redir) if @redir;
 
-	push(@{$childs}, print_token($name_indent, $token->{name}) . '()');
+	push(@{$childs}, print_token($context, $name_indent, $token->{name}) . '()');
 	push(@{$childs}, $body);
+	return join("\n", @{$childs});
+}
+
+sub dump_heredoc {
+	my ($context, $indent, $token) = @_;
+	my $childs = [];
+
+	my $heredoc_indent = $indent->clone();
+	$heredoc_indent->{depth} = 0;
+
+	push(@$childs, $token->{type} . $token->{here_end}->raw_string());
+
+	if ($indent->{heredoc_split}) {
+		push(@{$context->{heredoc}}, {
+			value    => $token->{value},
+			here_end => $token->{here_end}->dequote(),
+		});
+	}
+	else {
+		$context->{andorlist_ignore_sep} = 1;
+		push(@$childs, $token->{value} . $token->{here_end}->dequote());
+	}
+
 	return join("\n", @{$childs});
 }
 
@@ -276,17 +334,18 @@ my $dumper = {
 	Redirection     => \&dump_redirection,
 	While           => \&dump_while,
 	Until           => \&dump_until,
+	HereDoc         => \&dump_heredoc,
 };
 
 sub print_token {
-	my ($indent, $token) = @_;
+	my ($context, $indent, $token) = @_;
 
 	my $type = ref($token);
 	$type =~ s/.*:://;
 
 	my $func = $dumper->{$type} || 0;
 
-	return $func->($indent, $token) if $func;
+	return $func->($context, $indent, $token) if $func;
 	return "NOT-IMPLEMENTED ($type)";
 }
 
@@ -300,4 +359,7 @@ my $result = $p->parse(sub {
 	return scalar <$fh>;
 });
 
-print print_token(ShellParser::Indent->new(), $result) . "\n";
+my $context = {
+	heredoc => [],
+};
+print print_token($context, ShellParser::Indent->new(), $result) . "\n";

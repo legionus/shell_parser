@@ -1,0 +1,9 @@
+cat <<EOF1
+foo
+EOF1
+
+echo OK
+
+cat <<EOF2
+bar
+EOF2
