@@ -77,7 +77,11 @@ sub _get_qq_string_part {
         my $name = $self->{lexer}->get_variable_name();
         if ($name eq '{') {
             my $content = "";
-            while (my $token = $self->_get_word_part()) {
+            while (1) {
+                my $token = $self->_get_word_part();
+                if (!defined($token)) {
+                    die "Expected '}', got EOF";
+                }
                 $content .= $token->raw_string();
                 last if $token->raw_string() eq '}';
             }
@@ -86,7 +90,11 @@ sub _get_qq_string_part {
         if ($name eq '((') {
             my $content = "";
             my $depth = 2;
-            while (my $token = $self->_get_word_part()) {
+            while (1) {
+                my $token = $self->_get_word_part();
+                if (!defined($token)) {
+                    die "Expected '((', got EOF";
+                }
                 $content .= $token->raw_string();
                 $depth += 1 if $token->raw_string eq '(';
                 $depth -= 1 if $token->raw_string eq ')';
