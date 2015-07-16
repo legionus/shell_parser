@@ -60,11 +60,70 @@ sub got_heredoc {
 
 use ShellParser::Lexeme::QQString;
 use ShellParser::Lexeme::Word;
+use ShellParser::Lexeme::CommandSubstitution;
 use ShellParser::Lexeme::HereDoc;
 
 sub _like_a_word {
     my ($self, $text) = @_;
     return $text =~ /^[^\s<>()|;&]/;
+}
+
+sub _get_variable {
+    my ($self, $head) = @_;
+
+    my $name = $self->{lexer}->get_variable_name();
+
+    if ($name eq '{') {
+        my $content = "";
+        while (1) {
+            my $token = $self->_get_word_part();
+            if (!defined($token)) {
+                die "Expected '}', got EOF";
+            }
+            $content .= $token->raw_string();
+            last if $token->raw_string() eq '}';
+        }
+        return ShellParser::Lexeme->new($head->raw_string() . $name . $content);
+    }
+
+    if ($name eq '((') {
+        my $content = "";
+        my $depth = 2;
+        while (1) {
+            my $token = $self->_get_word_part();
+            if (!defined($token)) {
+                die "Expected ')', got EOF";
+            }
+            $content .= $token->raw_string();
+            $depth += 1 if $token->raw_string() eq '(';
+            $depth -= 1 if $token->raw_string() eq ')';
+            last if $depth == 0;
+        }
+        return ShellParser::Lexeme->new($head->raw_string() . $name . $content);
+    }
+
+    if ($name eq '(') {
+        my @value_parts;
+        my $old_state = $self->{state};
+        $self->{state} = STATE_NORMAL;
+        my $prev_state = $self->{state};
+        while (my ($token, $value) = $self->_get_next_token()) {
+            if ($token eq '') {
+                die "Expected ')', got EOF";
+            }
+            # TODO(dmage): there shouldn't be two kind of values.
+            if (ref($value) eq '') {
+                $value = ShellParser::Lexeme->new($value);
+            }
+            last if ($prev_state == STATE_NORMAL || $prev_state == STATE_COMMAND) && $value->raw_string() eq ')';
+            push(@value_parts, [$token, $value]);
+            $prev_state = $self->{state};
+        }
+        $self->{state} = $old_state;
+        return ShellParser::Lexeme::CommandSubstitution->new(\@value_parts);
+    }
+
+    return ShellParser::Lexeme->new($head->raw_string() . $name);
 }
 
 sub _get_qq_string_part {
@@ -74,55 +133,7 @@ sub _get_qq_string_part {
     return $head if !defined($head);
 
     if ($head->raw_string() eq '$') {
-        my $name = $self->{lexer}->get_variable_name();
-        if ($name eq '{') {
-            my $content = "";
-            while (1) {
-                my $token = $self->_get_word_part();
-                if (!defined($token)) {
-                    die "Expected '}', got EOF";
-                }
-                $content .= $token->raw_string();
-                last if $token->raw_string() eq '}';
-            }
-            return ShellParser::Lexeme->new($head->raw_string() . $name . $content);
-        }
-        if ($name eq '((') {
-            my $content = "";
-            my $depth = 2;
-            while (1) {
-                my $token = $self->_get_word_part();
-                if (!defined($token)) {
-                    die "Expected '((', got EOF";
-                }
-                $content .= $token->raw_string();
-                $depth += 1 if $token->raw_string eq '(';
-                $depth -= 1 if $token->raw_string eq ')';
-                last if $depth == 0;
-            }
-            return ShellParser::Lexeme->new($head->raw_string() . $name . $content);
-        }
-        if ($name eq '(') {
-            my $content = "";
-            my $old_state = $self->{state};
-            $self->{state} = STATE_NORMAL;
-            my $prev_state = $self->{state};
-            while (my ($token, $value) = $self->_get_next_token()) {
-                if ($token eq '') {
-                    die "Unexpected end of data";
-                }
-                # TODO(dmage): there shouldn't be two kind of values.
-                if (ref($value) ne '') {
-                    $value = $value->as_string();
-                }
-                $content .= $value;
-                last if ($prev_state == STATE_NORMAL || $prev_state == STATE_COMMAND) && $value eq ')';
-                $prev_state = $self->{state};
-            }
-            $self->{state} = $old_state;
-            return ShellParser::Lexeme->new($head->raw_string() . $name . $content);
-        }
-        return ShellParser::Lexeme->new($head->raw_string() . $name);
+        return $self->_get_variable($head);
     }
 
     if ($head->raw_string() eq '`') {
@@ -152,17 +163,21 @@ sub _get_word_part {
         my $str = "";
         while (1) {
             my $lexeme_obj = $self->_get_qq_string_part();
-            die "Expected '\"', got EOF" if !defined($lexeme_obj);
+            if (!defined($lexeme_obj)) {
+                die "Expected '\"', got EOF";
+            }
             last if $lexeme_obj->raw_string() eq '"';
             if (
                 $lexeme_obj->isa("ShellParser::Lexeme::LineConcat") ||
                 $lexeme_obj->isa("ShellParser::Lexeme::Escaped") ||
+                $lexeme_obj->isa("ShellParser::Lexeme::CommandSubstitution") ||
                 $lexeme_obj->as_string() =~ /^\$/
             ) {
                 push(@qq_value_parts, ShellParser::Lexeme->new($str)) if $str;
                 $str = "";
                 push(@qq_value_parts, $lexeme_obj);
             } else {
+                # TODO(dmage): ugly hack to minimize tree size
                 $str .= $lexeme_obj->raw_string();
             }
         }
