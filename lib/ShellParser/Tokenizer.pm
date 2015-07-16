@@ -53,11 +53,6 @@ sub new {
     return bless($self, $class);
 }
 
-sub got_heredoc {
-    my ($self, $delim, $accum_ref, $strip_tabs) = @_;
-    $self->{lexer}->got_heredoc($delim, $accum_ref, $strip_tabs);
-}
-
 use ShellParser::Lexeme::QQString;
 use ShellParser::Lexeme::Word;
 use ShellParser::Lexeme::CommandSubstitution;
@@ -261,9 +256,9 @@ sub _get_next_token {
                     die "Expected WORD, got $type";
                 }
 
-                my $r = ShellParser::Lexeme::HereDoc->new($op, $here_end);
-                my $strip_tabs = ($op eq '<<-');
-                $self->{lexer}->got_heredoc($here_end, \$r->{value}, $strip_tabs);
+                my $strip_tabs = ($op eq '<<-') + 0;
+                my $r = ShellParser::Lexeme::HereDoc->new($op, $here_end, $strip_tabs);
+                $self->{lexer}->got_heredoc($r);
                 return ('IO_HERE', $r)
             }
             return ($operators{$op}, $lexeme);

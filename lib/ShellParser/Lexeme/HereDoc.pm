@@ -6,11 +6,12 @@ use warnings;
 use base 'ShellParser::Lexeme';
 
 sub new {
-    my ($class, $type, $here_end) = @_;
+    my ($class, $type, $here_end, $strip_tabs) = @_;
     return bless({
         type => $type,
         here_end => $here_end,
-        value => "",
+        strip_tabs => $strip_tabs,
+        lines => [],
     }, $class);
 }
 
@@ -36,7 +37,10 @@ sub p_args {
 
 sub traverse {
     my ($self, $cb) = @_;
-    $cb->($self->{here_end}, "delimiter");
+    $cb->($self->{here_end}, "here_end");
+    foreach my $line (@{$self->{lines}}) {
+        $cb->($line, "line");
+    }
 }
 
 1;

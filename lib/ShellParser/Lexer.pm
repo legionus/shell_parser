@@ -123,10 +123,8 @@ sub _get_word_part {
 }
 
 sub _get_heredoc {
-    my ($self, $heredoc_desc) = @_;
-    my $delim = $heredoc_desc->{delim}->dequote();
-    my $accum_ref = $heredoc_desc->{accum_ref};
-    my $strip_tabs = $heredoc_desc->{strip_tabs};
+    my ($self, $r) = @_;
+    my $delim = $r->{here_end}->dequote();
 
     while (1) {
         my $line = $self->{reader}->('HEREDOC:' . $delim);
@@ -134,26 +132,16 @@ sub _get_heredoc {
             die "Unexpected end of here-document ($delim)";
         }
         chomp($line);
-        if ($strip_tabs) {
-            $line =~ s/^\t+//;
-        }
         if ($line eq $delim) {
             return;
         }
-        $$accum_ref .= "$line\n";
+        push(@{$r->{lines}}, ShellParser::Lexeme->new($line));
     }
 }
 
 sub got_heredoc {
-    my ($self, $delim, $accum_ref, $strip_tabs) = @_;
-    push(
-        @{$self->{heredoc}},
-        {
-            delim => $delim,
-            accum_ref => $accum_ref,
-            strip_tabs => $strip_tabs,
-        }
-    );
+    my ($self, $r) = @_;
+    push(@{$self->{heredoc}}, $r);
 }
 
 sub get_next_lexeme {
@@ -161,8 +149,8 @@ sub get_next_lexeme {
 
     if (!defined($self->{current_line})) {
         while (@{$self->{heredoc}} != 0) {
-            my $heredoc_desc = shift(@{$self->{heredoc}});
-            $self->_get_heredoc($heredoc_desc);
+            my $r = shift(@{$self->{heredoc}});
+            $self->_get_heredoc($r);
         }
         $self->{current_line} = $self->{reader}->('new');
     }

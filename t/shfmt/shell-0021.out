@@ -2,14 +2,14 @@ cat <<EOF1
 	FOO
 EOF1
 cat <<-EOF2
-BAR
+	BAR
 EOF2
 cat <<'EOF3'
 	BAZ
 EOF3
 cat <<-'EOF3'
-FAR
+	FAR
 EOF3
 cat <<-"EOF4"
-FAZ
+	FAZ
 EOF4
