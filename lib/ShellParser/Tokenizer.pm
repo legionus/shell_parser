@@ -248,7 +248,7 @@ sub _get_next_token {
     }
 
     if ($lexeme =~ /^#/) {
-        return ('BLANK', $lexeme)
+        return ('COMMENT', $lexeme)
     }
     if ($lexeme =~ /^\s*$/) {
         return ('BLANK', $lexeme)
