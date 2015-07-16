@@ -121,10 +121,25 @@ sub _get_variable {
     return ShellParser::Lexeme->new($head->raw_string() . $name);
 }
 
+sub _get_backquoted {
+    my ($self, $head) = @_;
+
+    my $content = "";
+    while (1) {
+        my $token = $self->{lexer}->get_next_lexeme();
+        if (!defined($token)) {
+            die "Expected '`', got EOF";
+        }
+        $content .= $token->raw_string();
+        last if $token->raw_string() eq '`';
+    }
+    return ShellParser::Lexeme->new($head->raw_string() . $content);
+}
+
 sub _get_qq_string_part {
     my ($self, $head) = @_;
 
-    $head //= $self->{lexer}->get_next_lexeme();
+    $head //= $self->{lexer}->get_next_lexeme(1);
     return $head if !defined($head);
 
     if ($head->raw_string() eq '$') {
@@ -132,16 +147,7 @@ sub _get_qq_string_part {
     }
 
     if ($head->raw_string() eq '`') {
-        my $content = "";
-        while (1) {
-            my $token = $self->{lexer}->get_next_lexeme();
-            if (!defined($token)) {
-                die "Expected '`', got EOF";
-            }
-            $content .= $token->raw_string();
-            last if $token->raw_string() eq '`';
-        }
-        return ShellParser::Lexeme->new($head->raw_string() . $content);
+        return $self->_get_backquoted($head);
     }
 
     return $head;
@@ -184,7 +190,15 @@ sub _get_word_part {
         return $self->{lexer}->get_q_string();
     }
 
-    return $self->_get_qq_string_part($head);
+    if ($head->raw_string() eq '$') {
+        return $self->_get_variable($head);
+    }
+
+    if ($head->raw_string() eq '`') {
+        return $self->_get_backquoted($head);
+    }
+
+    return $head;
 }
 
 sub _get_next_lexeme {

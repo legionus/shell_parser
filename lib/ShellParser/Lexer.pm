@@ -145,7 +145,7 @@ sub got_heredoc {
 }
 
 sub get_next_lexeme {
-    my ($self) = @_;
+    my ($self, $ignore_comments) = @_;
 
     if (!defined($self->{current_line})) {
         while (@{$self->{heredoc}} != 0) {
@@ -160,9 +160,12 @@ sub get_next_lexeme {
 
     my $target = \$self->{current_line};
     TOKEN: {
-        return ShellParser::Lexeme->new($1) if $$target =~ /\G (\n)   /gcx;
-        return ShellParser::Lexeme->new($1) if $$target =~ /\G (\#.*) /gcx;
-        return ShellParser::Lexeme->new($1) if $$target =~ /\G ([ \t]+)  /gcx;
+        if (!$ignore_comments) {
+            return ShellParser::Lexeme->new($1) if $$target =~ /\G (\#.*) /gcx;
+        }
+
+        return ShellParser::Lexeme->new($1) if $$target =~ /\G (\n) /gcx;
+        return ShellParser::Lexeme->new($1) if $$target =~ /\G ([ \t]+) /gcx;
 
         foreach my $q (@operators) {
             return ShellParser::Lexeme->new($1) if ($$target =~ /\G (\Q$q\E) /gcx);
