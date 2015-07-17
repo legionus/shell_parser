@@ -160,7 +160,9 @@ sub get_next_lexeme {
 
     my $target = \$self->{current_line};
     TOKEN: {
-        if (!$ignore_comments) {
+        if ($ignore_comments) {
+            return ShellParser::Lexeme->new($1) if $$target =~ /\G (\#) /gcx;
+        } else {
             return ShellParser::Lexeme->new($1) if $$target =~ /\G (\#.*) /gcx;
         }
 
@@ -179,7 +181,7 @@ sub get_next_lexeme {
         return ShellParser::Lexeme->new($1) if $$target =~ /\G (.) /gcx;
 
         $self->{current_line} = undef;
-        return $self->get_next_lexeme();
+        return $self->get_next_lexeme($ignore_comments);
     }
 }
 
