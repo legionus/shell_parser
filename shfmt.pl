@@ -3,12 +3,21 @@
 use strict;
 use warnings;
 
+use IO::String;
+
 use ShellParser;
 use ShellParser::Indent;
 
 sub dump_lexeme {
 	my ($context, $indent, $token) = @_;
 	return $token->as_string();
+}
+
+sub dump_word {
+	my ($context, $indent, $token) = @_;
+
+	my $childs = [ map { print_token($context, $indent+0, $_) } @{$token->{value}} ];
+	return join('', @{$childs});
 }
 
 sub dump_list {
@@ -313,28 +322,40 @@ sub dump_heredoc {
 	return join("\n", @{$childs});
 }
 
+sub dump_subshell {
+	my ($context, $indent, $token) = @_;
+	return '(' . print_token($context, $indent+0, $token->{body}) . ')';
+}
+
+sub dump_commandsubstitution {
+	my ($context, $indent, $token) = @_;
+	return '"$(' . print_token($context, $indent+0, $token->{body}) . ')"';
+}
+
 my $dumper = {
-	Lexeme          => \&dump_lexeme,
-	Word            => \&dump_lexeme,
-	QString         => \&dump_lexeme,
-	QQString        => \&dump_lexeme,
-	LineConcat      => \&dump_lexeme,
-	List            => \&dump_list,
-	AndOrList       => \&dump_andorlist,
-	Pipeline        => \&dump_pipeline,
-	SimpleCommand   => \&dump_simplecommand,
-	CompoundCommand => \&dump_compoundcommand,
-	If              => \&dump_if,
-	For             => \&dump_for,
-	DoGroup         => \&dump_dogroup,
-	FuncDef         => \&dump_funcdef,
-	BraceGroup      => \&dump_bracegroup,
-	Case            => \&dump_case,
-	CaseItem        => \&dump_caseitem,
-	Redirection     => \&dump_redirection,
-	While           => \&dump_while,
-	Until           => \&dump_until,
-	HereDoc         => \&dump_heredoc,
+	Lexeme              => \&dump_lexeme,
+	QString             => \&dump_lexeme,
+	QQString            => \&dump_lexeme,
+	LineConcat          => \&dump_lexeme,
+	Word                => \&dump_word,
+	List                => \&dump_list,
+	AndOrList           => \&dump_andorlist,
+	Pipeline            => \&dump_pipeline,
+	SimpleCommand       => \&dump_simplecommand,
+	CompoundCommand     => \&dump_compoundcommand,
+	If                  => \&dump_if,
+	For                 => \&dump_for,
+	DoGroup             => \&dump_dogroup,
+	FuncDef             => \&dump_funcdef,
+	BraceGroup          => \&dump_bracegroup,
+	Case                => \&dump_case,
+	CaseItem            => \&dump_caseitem,
+	Redirection         => \&dump_redirection,
+	While               => \&dump_while,
+	Until               => \&dump_until,
+	HereDoc             => \&dump_heredoc,
+	SubShell            => \&dump_subshell,
+	CommandSubstitution => \&dump_commandsubstitution,
 };
 
 sub print_token {
@@ -349,6 +370,23 @@ sub print_token {
 	return "NOT-IMPLEMENTED ($type)";
 }
 
+sub parse_subshell {
+	my ($token) = @_;
+	my $type = ref($token);
+
+	if ($type =~ /^.*::CommandSubstitution$/) {
+		my $p = ShellParser->new();
+
+		my $subshell = join('', map { $_->[1]->raw_string() } @{$token->{tokens}});
+		my $io = IO::String->new($subshell);
+
+		$token->{body} = $p->parse(sub { return scalar <$io>; });
+		return $token->{body}->traverse(\&parse_subshell);
+	}
+
+	return $token->traverse(\&parse_subshell);
+}
+
 my $p = ShellParser->new();
 
 open(my $fh, '<', $ARGV[0]) or die $!;
@@ -358,6 +396,8 @@ my $result = $p->parse(sub {
 	$lineno++;
 	return scalar <$fh>;
 });
+
+parse_subshell($result);
 
 my $context = {
 	heredoc => [],
