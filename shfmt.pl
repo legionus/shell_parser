@@ -29,20 +29,19 @@ sub dump_list {
 
 sub dump_andorlist {
 	my ($context, $indent, $token) = @_;
-	my $childs = [ $indent . print_token($context, $indent+0, $token->{first}) ];
-
 	my $delim = "\n";
-	my $rest_indent = $indent->clone();
-	$rest_indent++;
 
-	#if ($indent->{condition}) {
-	#	$rest_indent->{indent} = "";
-	#	$delim = " ";
-	#}
+	my $child_indent = $indent->clone();
+	$child_indent->{heredoc_split} = 1 if @{$token->{rest}};
+
+	my $childs = [ $indent . print_token($context, $child_indent+0, $token->{first}) ];
+
+	my $indent_string = "";
+	$indent_string .= $indent + 1 if !@{$context->{heredoc}};
 
 	foreach my $elem (@{$token->{rest}}) {
 		$childs->[-1] .= " " . ($elem->[0] // "");
-		push(@{$childs}, $rest_indent . print_token($context, $indent+0, $elem->[1]));
+		push(@{$childs}, $indent_string . print_token($context, $child_indent+0, $elem->[1]));
 	}
 
 	if ($indent->{condition} && $token->{sep} eq "\n") {
@@ -62,6 +61,10 @@ sub dump_andorlist {
 	if ($context->{andorlist_ignore_sep}) {
 		$context->{andorlist_ignore_sep} = 0;
 		$sep = "";
+	}
+
+	if (@{$context->{heredoc}} > 0) {
+		$delim = " ";
 	}
 
 	my $s = join($delim, @{$childs}) . $sep;
