@@ -297,16 +297,17 @@ sub dump_heredoc {
 	$heredoc_indent->{depth} = 0;
 
 	push(@$childs, $token->{type} . $token->{here_end}->raw_string());
+	my $heredoc_value = join("", map { $_->raw_string() . "\n" } @{$token->{lines}});
 
 	if ($indent->{heredoc_split}) {
 		push(@{$context->{heredoc}}, {
-			value    => join("", map { $_->raw_string() . "\n" } @{$token->{lines}}),
+			value    => $heredoc_value,
 			here_end => $token->{here_end}->dequote(),
 		});
 	}
 	else {
 		$context->{andorlist_ignore_sep} = 1;
-		push(@$childs, join("", map { $_->raw_string() . "\n" } @{$token->{lines}}) . $token->{here_end}->dequote());
+		push(@$childs, $heredoc_value . $token->{here_end}->dequote());
 	}
 
 	return join("\n", @{$childs});
