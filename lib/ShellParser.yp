@@ -101,13 +101,9 @@ compound_command : brace_group
 subshell         : '(' compound_list ')'
                  { ShellParser::Token::SubShell->new($_[2]) }
                  ;
-compound_list    :              term
-                 { $_[1]->{body}->[-1]->{sep} = ''; $_[1] }
-                 | newline_list term
+compound_list    : linebreak term
                  { $_[2]->{body}->[-1]->{sep} = ''; $_[2] }
-                 |              term separator
-                 { $_[1]->{body}->[-1]->{sep} = $_[2]; $_[1] }
-                 | newline_list term separator
+                 | linebreak term separator
                  { $_[2]->{body}->[-1]->{sep} = $_[3]; $_[2] }
                  ;
 term             : term separator and_or
@@ -115,10 +111,9 @@ term             : term separator and_or
                  |                and_or
                  { ShellParser::Token::List->new($_[1]) }
                  ;
-for_clause       : For name linebreak                            do_group
+for_clause       : For name                       sequential_sep do_group
+                 # TODO: if sequential_sep == ';' then non_posix = 1
                  { ShellParser::Token::For->new($_[2], undef, $_[4]) }
-                 | For name linebreak             sequential_sep do_group
-                 { my $r = ShellParser::Token::For->new($_[2], [], $_[5]); $r->{non_posix} = 1; $r }
                  | For name linebreak in          sequential_sep do_group
                  { ShellParser::Token::For->new($_[2], [], $_[6]) }
                  | For name linebreak in wordlist sequential_sep do_group
