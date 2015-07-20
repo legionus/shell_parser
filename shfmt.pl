@@ -56,7 +56,7 @@ sub dump_andorlist {
 
 		foreach my $elem (@{$token->{rest}}) {
 			$childs->[-1] .= " " . ($elem->[0] // "");
-			push(@{$childs}, $indent_string . print_token($context, $child_indent+0, $elem->[1]));
+			push(@{$childs}, $indent_string . print_token($context, $child_indent+1, $elem->[1]));
 		}
 	}
 
