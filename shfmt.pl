@@ -320,13 +320,8 @@ sub dump_funcdef {
 	my $name_indent = $indent->clone();
 	$name_indent->{depth} = 0;
 
-	my @redir;
-	foreach my $redirect (@{$token->{redirect}}) {
-		push(@redir, print_token($context, $indent+0, $redirect));
-	}
-
 	my $body = print_token($context, $indent+0, $token->{body});
-	$body .= " " . join(" ", @redir) if @redir;
+	$body .= " " . print_token($context, $indent+0, $_) foreach @{$token->{redirect}};
 
 	push(@{$childs}, print_token($context, $name_indent, $token->{name}) . '()');
 	push(@{$childs}, $body);
