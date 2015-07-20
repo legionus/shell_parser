@@ -68,7 +68,7 @@ sub get_variable_name {
         return $1;
     }
 
-    if ($$target =~ /\G ([^\s<>()|;&]) /gcx) {
+    if ($$target =~ /\G ([^\s<>()|;&`]) /gcx) {
         my $value = $1;
         if ($value =~ /^[A-Za-z_]$/) {
             while (1) {
