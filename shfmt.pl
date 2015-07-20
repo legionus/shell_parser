@@ -365,6 +365,7 @@ my $dumper = {
 	QString             => \&dump_lexeme,
 	QQString            => \&dump_lexeme,
 	LineConcat          => \&dump_lexeme,
+	Escaped             => \&dump_lexeme,
 	Word                => \&dump_word,
 	List                => \&dump_list,
 	AndOrList           => \&dump_andorlist,
