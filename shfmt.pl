@@ -210,6 +210,8 @@ sub dump_for {
 	if (@{$words}) {
 		push(@{$childs}, "in");
 		push(@{$childs}, join(" ", @{$words}) . ";");
+	} else {
+		$childs->[-1] .= ";";
 	}
 
 	push(@{$childs}, print_token($context, $indent+0, $token->{body}));
