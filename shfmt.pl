@@ -99,7 +99,6 @@ sub dump_pipeline {
 		$s .= print_token($context, $pipe_indent+0, $a);
 
 		push(@{$childs}, $s);
-		$pipe_indent->{depth} = 0;
 	}
 
 	return ($token->{banged} ? "! " : "") . join("", @{$childs});
