@@ -5,14 +5,14 @@ case "$foo" in
 		echo "test"
 		;;
 	(*)
-		echo "foo bar";
+		echo "foo bar"
 		;;
 esac
 case "foo=1" in
 	(bar)
 		if true; then
-			echo nop;
-		fi;
+			echo nop
+		fi
 		case 1 in
 			(*)
 				;;
@@ -26,6 +26,6 @@ case "foo=1" in
 esac
 case foo in
 	(*)
-		echo 1;
+		echo 1
 		;;
 esac
