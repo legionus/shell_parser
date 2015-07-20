@@ -20,56 +20,49 @@ sub dump_word {
 	return join('', @{$childs});
 }
 
-sub dump_list {
-	my ($context, $indent, $token) = @_;
+sub _purge_heredoc {
+	my ($context, $indent) = @_;
 
-	my $childs = [ map { print_token($context, $indent+0, $_) } @{$token->{body}} ];
-	my $delim = $indent->{condition} ? " " : "\n";
+	return "" if !@{$context->{heredoc}};
 
-	my $s = "";
-	if (!$indent->{condition}) {
-		while (my $heredoc = shift @{$context->{heredoc}}) {
-			$s .= "\n" . $heredoc->{value} . $heredoc->{here_end};
-		}
+	my $childs = [];
+	while (my $heredoc = shift @{$context->{heredoc}}) {
+		push(@{$childs}, $heredoc->{value} . $heredoc->{here_end});
 	}
 
-	return join($delim, @{$childs}) . $s;
+	return join("\n", @{$childs});
+}
+
+sub dump_list {
+	my ($context, $indent, $token) = @_;
+	my $delim = "\n";
+
+	my $childs = [ map { print_token($context, $indent+0, $_) } @{$token->{body}} ];
+	my $s = join($delim, @{$childs});
+
+	return $s;
 }
 
 sub dump_andorlist {
 	my ($context, $indent, $token) = @_;
 	my $delim = "\n";
-
 	my $child_indent = $indent->clone();
-	$child_indent->{heredoc_split} = 1 if @{$token->{rest}};
 
 	my $childs = [ $indent . print_token($context, $child_indent+0, $token->{first}) ];
 
-	my $indent_string = "";
-	$indent_string .= $indent + 1 if !@{$context->{heredoc}};
+	if (@{$token->{rest}}) {
+		my $indent_string = "";
+		$indent_string .= $indent + 1 if !@{$context->{heredoc}};
 
-	foreach my $elem (@{$token->{rest}}) {
-		$childs->[-1] .= " " . ($elem->[0] // "");
-		push(@{$childs}, $indent_string . print_token($context, $child_indent+0, $elem->[1]));
-	}
-
-	if ($indent->{condition} && $token->{sep} eq "\n") {
-		$token->{sep} = ";";
+		foreach my $elem (@{$token->{rest}}) {
+			$childs->[-1] .= " " . ($elem->[0] // "");
+			push(@{$childs}, $indent_string . print_token($context, $child_indent+0, $elem->[1]));
+		}
 	}
 
 	my $sep = "";
-	if ($token->{sep} ne "") {
-		if ($token->{sep} eq ";") {
-			$sep = $token->{sep};
-		}
-		elsif ($token->{sep} ne "\n") {
-			$sep = " " . $token->{sep};
-		}
-	}
-
-	if ($context->{andorlist_ignore_sep}) {
-		$context->{andorlist_ignore_sep} = 0;
-		$sep = "";
+	if ($token->{sep} ne "" && $token->{sep} ne "\n" && $token->{sep} ne ";") {
+		$sep = " " . $token->{sep};
 	}
 
 	if (@{$context->{heredoc}} > 0) {
@@ -78,27 +71,38 @@ sub dump_andorlist {
 
 	my $s = join($delim, @{$childs}) . $sep;
 
+	if (!@{$token->{rest}}) {
+		my $heredoc_str = _purge_heredoc($context, $indent+0);
+		$s .= "\n$heredoc_str" if $heredoc_str;
+	}
+
 	return $s;
 }
 
 sub dump_pipeline {
 	my ($context, $indent, $token) = @_;
-
 	my $pipe_indent = $indent->clone();
-	if (@{$token->{body}} > 1) {
-		$pipe_indent->{heredoc_split} = 1;
-	}
 
 	my $childs = [];
 	foreach my $a (@{$token->{body}}) {
-		my $tailing_space = ((@{$token->{body}} - @{$childs}) == 1 ? "" : " ");
+		my $s = "";
+		$s .= " |" if @{$childs};
 
-		push(@$childs, print_token($context, $pipe_indent+0, $a) . $tailing_space);
+		my $heredoc_str = _purge_heredoc($context, $indent+0);
+		if ($heredoc_str) {
+			$s .= "\n" if @{$childs};
+			$s .= "$heredoc_str\n";
+		} else {
+			$s .= " " if @{$childs};
+		}
+
+		$s .= print_token($context, $pipe_indent+0, $a);
+
+		push(@{$childs}, $s);
 		$pipe_indent->{depth} = 0;
 	}
 
-	my $s = ($token->{banged} ? "! " : "") . join("| ", @{$childs});
-	return $s;
+	return ($token->{banged} ? "! " : "") . join("", @{$childs});
 }
 
 sub dump_redirection {
@@ -141,13 +145,20 @@ sub dump_compoundcommand {
 	return $s;
 }
 
+sub _complex_condition {
+	my ($token) = @_;
+	return (@{$token->{body}} > 1);
+}
+
 sub dump_condition {
 	my ($context, $indent, $token) = @_;
-
 	my $cond_indent = $indent->clone();
-	$cond_indent->{condition}     = 1;
-	$cond_indent->{heredoc_split} = 1;
-	$cond_indent->{depth}         = 0;
+
+	if (_complex_condition($token)) {
+		$cond_indent++;
+	} else {
+		$cond_indent->{depth} = 0;
+	}
 
 	return print_token($context, $cond_indent, $token);
 }
@@ -157,23 +168,28 @@ sub dump_if {
 	my $childs = [];
 	foreach my $body (@{$token->{body}}) {
 		if ($body->{condition}) {
-			my $condition = [
-				(!@{$childs} ? "if" : $indent . "elif"),
-				dump_condition($context, $indent, $body->{condition}),
-				"then",
-			];
-			push(@{$childs}, join(" ", @{$condition}));
+			my $delim = " ";
+			my $suffix = ";";
 
-			while (my $heredoc = shift @{$context->{heredoc}}) {
-				push(@{$childs}, $heredoc->{value} . $heredoc->{here_end});
+			if (_complex_condition($body->{condition})) {
+				$delim = "\n";
+				$suffix = "";
 			}
 
-			push(@{$childs}, print_token($context, $indent+1, $body->{body}));
+			my $condition = [];
+			push(@{$condition}, (!@{$childs} ? "if" : $indent . "elif"));
+			push(@{$condition}, dump_condition($context, $indent, $body->{condition}) . $suffix);
+			push(@{$condition}, "then");
+
+			push(@{$childs}, join($delim, @{$condition}));
+			push(@{$childs}, _purge_heredoc($context, $indent+0))
+				if @{$context->{heredoc}};
 		}
 		else {
 			push(@{$childs}, $indent . "else");
-			push(@{$childs}, print_token($context, $indent+1, $body->{body}));
 		}
+
+		push(@{$childs}, print_token($context, $indent+1, $body->{body}));
 	}
 	push(@{$childs}, $indent . "fi");
 	return join("\n", @{$childs});
@@ -203,27 +219,46 @@ sub dump_for {
 
 sub dump_while {
 	my ($context, $indent, $token) = @_;
+
+	my $delim = " ";
+	my $suffix = ";";
+
+	if (_complex_condition($token->{condition})) {
+		$delim = "\n";
+		$suffix = "";
+	}
+
 	my $childs = [ "while" ];
-	push(@{$childs}, dump_condition($context, $indent, $token->{condition}));
+	push(@{$childs}, dump_condition($context, $indent, $token->{condition}) . $suffix);
 	push(@{$childs}, print_token($context, $indent+0, $token->{body}));
-	return join(" ", @{$childs});
+	return join($delim, @{$childs});
 }
 
 sub dump_until {
 	my ($context, $indent, $token) = @_;
+
+	my $delim = " ";
+	my $suffix = ";";
+
+	if (_complex_condition($token->{condition})) {
+		$delim = "\n";
+		$suffix = "";
+	}
+
 	my $childs = [ "until" ];
-	push(@{$childs}, dump_condition($context, $indent, $token->{condition}));
+	push(@{$childs}, dump_condition($context, $indent, $token->{condition}) . $suffix);
 	push(@{$childs}, print_token($context, $indent+0, $token->{body}));
-	return join(" ", @{$childs});
+	return join($delim, @{$childs});
 }
 
 sub dump_dogroup {
 	my ($context, $indent, $token) = @_;
 	my $childs = [];
 	push(@{$childs}, "do");
-	while (my $heredoc = shift @{$context->{heredoc}}) {
-		push(@{$childs}, $heredoc->{value} . $heredoc->{here_end});
-	}
+
+	push(@{$childs}, _purge_heredoc($context, $indent+0))
+		if @{$context->{heredoc}};
+
 	push(@{$childs}, print_token($context, $indent+1, $token->{body}));
 	push(@{$childs}, $indent . "done");
 	return join("\n", @{$childs});
@@ -306,18 +341,11 @@ sub dump_heredoc {
 	$heredoc_indent->{depth} = 0;
 
 	push(@$childs, $token->{type} . $token->{here_end}->raw_string());
-	my $heredoc_value = join("", map { $_->raw_string() . "\n" } @{$token->{lines}});
 
-	if ($indent->{heredoc_split}) {
-		push(@{$context->{heredoc}}, {
-			value    => $heredoc_value,
-			here_end => $token->{here_end}->dequote(),
-		});
-	}
-	else {
-		$context->{andorlist_ignore_sep} = 1;
-		push(@$childs, $heredoc_value . $token->{here_end}->dequote());
-	}
+	push(@{$context->{heredoc}}, {
+		value    => join("", map { $_->raw_string() . "\n" } @{$token->{lines}}),
+		here_end => $token->{here_end}->dequote(),
+	});
 
 	return join("\n", @{$childs});
 }

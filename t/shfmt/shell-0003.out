@@ -1,16 +1,16 @@
 xxx1()
 {
-	ls -l -a;
+	ls -l -a
 }
 xxx2()
 {
-	echo OK;
+	echo OK
 } >&2
 xxx3()
 {
-	echo ${foo:-'}'};
+	echo ${foo:-'}'}
 }
 xxx4()
 {
-	echo ${foo:-"}"};
+	echo ${foo:-"}"}
 }

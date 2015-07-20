@@ -1,7 +1,10 @@
-if cat <<EOF1; cat <<EOF2; then
+if
+	cat <<EOF1
 foo
 EOF1
+	cat <<EOF2
 bar
 EOF2
-	echo OK;
+then
+	echo OK
 fi

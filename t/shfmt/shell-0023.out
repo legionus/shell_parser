@@ -1,3 +1,4 @@
-cat <<\EOF || write_fail=1
+cat <<\EOF ||
 Hello!
 EOF
+write_fail=1

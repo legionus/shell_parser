@@ -1,5 +1,6 @@
-if cat <<EOF | grep -iqs foo; then
+if cat <<EOF |
 FOO
 EOF
+grep -iqs foo; then
 	echo OK
 fi

@@ -1,15 +1,18 @@
-while cat <<EOF1; false; do
+while
+	cat <<EOF1
 foo
 EOF1
-	echo OK;
+	false
+do
+	echo OK
 done
 while read var; do
-	echo FOO;
+	echo FOO
 done <<EOF2
 BAR
 EOF2
 while read name; do
-	echo;
+	echo
 done >/tmp/111 2>/tmp/222 <<EOF3
 BAZ
 EOF3

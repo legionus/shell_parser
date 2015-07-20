@@ -1,0 +1,11 @@
+while
+	date &&
+		who ||
+		ls
+	cat file
+	wc file >output &
+	true
+do
+	ls
+	cat file
+done
