@@ -147,11 +147,11 @@ case_list        : case_list case_item
                  ;
 case_item_ns     :     pattern ')'               linebreak
                  { ShellParser::Token::CaseItem->new(undef, $_[1], undef, undef) }
-                 |     pattern ')' compound_list linebreak
+                 |     pattern ')' compound_list
                  { ShellParser::Token::CaseItem->new(undef, $_[1], $_[3], undef) }
                  | '(' pattern ')'               linebreak
                  { ShellParser::Token::CaseItem->new($_[1], $_[2], undef, undef) }
-                 | '(' pattern ')' compound_list linebreak
+                 | '(' pattern ')' compound_list
                  { ShellParser::Token::CaseItem->new($_[1], $_[2], $_[4], undef) }
                  ;
 case_item        :     pattern ')' linebreak     DSEMI linebreak
