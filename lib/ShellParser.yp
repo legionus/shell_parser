@@ -290,8 +290,6 @@ filename         : WORD                      /* Apply rule 2 */
                  ;
 io_here          : IO_HERE
                  ;
-here_end         : WORD                      /* Apply rule 3 */
-                 ;
 newline_list     :                      NEWLINE
                  |              COMMENT NEWLINE
                  | newline_list         NEWLINE
