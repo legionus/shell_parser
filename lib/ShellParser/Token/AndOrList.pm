@@ -10,7 +10,7 @@ sub new {
     return bless({
         first => $first,
         rest => [],
-        sep => undef,
+        sep => '',
     }, $class);
 }
 

@@ -62,16 +62,19 @@ use ShellParser::Token::While;
 complete_command : list separator
                  | list
                  ;
-list             : list separator_op and_or
+list             : list separator_op and_or_ns
                  { push(@{$_[1]}, $_[2], $_[3]); $_[1] }
-                 |                   and_or
+                 |                   and_or_ns
                  { [$_[1]] }
                  ;
-and_or           :                         pipeline
+and_or           : and_or_ns separator
+                 { $_[1]->{sep} = $_[2]; $_[1] }
+                 ;
+and_or_ns        :                            pipeline
                  { ShellParser::Token::AndOrList->new($_[1]) }
-                 | and_or AND_IF linebreak pipeline
+                 | and_or_ns AND_IF linebreak pipeline
                  { $_[1]->append($_[2], $_[4]); $_[1] }
-                 | and_or OR_IF  linebreak pipeline
+                 | and_or_ns OR_IF  linebreak pipeline
                  { $_[1]->append($_[2], $_[4]); $_[1] }
                  ;
 pipeline         :      pipe_sequence
@@ -101,14 +104,19 @@ compound_command : brace_group
 subshell         : '(' compound_list ')'
                  { ShellParser::Token::SubShell->new($_[2]) }
                  ;
-compound_list    : linebreak term
-                 { $_[2]->{body}->[-1]->{sep} = ''; $_[2] }
-                 | linebreak term separator
-                 { $_[2]->{body}->[-1]->{sep} = $_[3]; $_[2] }
+compound_list    : linebreak term_list
+                 { $_[2] }
+                 | linebreak term_list_ns
+                 { $_[2] }
                  ;
-term             : term separator and_or
-                 { $_[1]->{body}->[-1]->{sep} = $_[2]; $_[1]->append($_[3]); $_[1] }
-                 |                and_or
+term_list_ns     : term_list and_or_ns
+                 { $_[1]->append($_[2]); $_[1] }
+                 |           and_or_ns
+                 { ShellParser::Token::List->new($_[1]) }
+                 ;
+term_list        : term_list and_or
+                 { $_[1]->append($_[2]); $_[1] }
+                 |           and_or
                  { ShellParser::Token::List->new($_[1]) }
                  ;
 for_clause       : For name                       sequential_sep do_group
@@ -296,7 +304,9 @@ separator_op     : '&'
                  | ';'
                  ;
 separator        : separator_op linebreak
+                 { $_[1] }
                  | newline_list
+                 { '' }
                  ;
 sequential_sep   : ';' linebreak
                  | newline_list

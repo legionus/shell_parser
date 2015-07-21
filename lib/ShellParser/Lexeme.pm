@@ -3,7 +3,7 @@ package ShellParser::Lexeme;
 use strict;
 use warnings;
 
-use overload '""' => \&as_string;
+use overload '""' => sub { $_[0]->as_string() };
 
 sub new {
     my ($class, $value) = @_;
