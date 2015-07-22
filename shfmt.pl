@@ -348,12 +348,20 @@ sub dump_heredoc {
 
 sub dump_subshell {
 	my ($context, $indent, $token) = @_;
-	return '(' . print_token($context, $indent+0, $token->{body}) . ')';
+
+	my $subshell_indent = $indent->clone();
+	$subshell_indent->{depth} = 0;
+
+	return '(' . print_token($context, $subshell_indent, $token->{body}) . ')';
 }
 
 sub dump_commandsubstitution {
 	my ($context, $indent, $token) = @_;
-	return '"$(' . print_token($context, $indent+0, $token->{body}) . ')"';
+
+	my $subshell_indent = $indent->clone();
+	$subshell_indent->{depth} = 0;
+
+	return '"$(' . print_token($context, $subshell_indent, $token->{body}) . ')"';
 }
 
 my $dumper = {
