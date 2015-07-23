@@ -60,7 +60,7 @@ use ShellParser::Lexeme::HereDoc;
 
 sub _like_a_word {
     my ($self, $text) = @_;
-    return $text =~ /^[^\s<>()|;&]/;
+    return $text =~ /^[^\s<>()|;&#]/;
 }
 
 sub _get_variable {
