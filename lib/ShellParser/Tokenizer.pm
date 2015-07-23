@@ -275,7 +275,7 @@ sub _get_next_token {
                 $self->{lexer}->got_heredoc($r);
                 return ('IO_HERE', $r)
             }
-            return ($operators{$op}, $lexeme);
+            return ($operators{$op}, $lexeme_obj);
         }
     }
 

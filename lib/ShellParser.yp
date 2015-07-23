@@ -61,7 +61,8 @@ use ShellParser::Token::While;
 #%start  complete_command
 %start  compound_list
 %%
-complete_command : list separator
+complete_command : list separator_op linebreak
+                 | list newline_list
                  | list
                  ;
 list             : list separator_op and_or_ns
@@ -69,15 +70,17 @@ list             : list separator_op and_or_ns
                  |                   and_or_ns
                  { [$_[1]] }
                  ;
-and_or           : and_or_ns separator
-                 { $_[1]->{sep} = $_[2]; $_[1] }
+and_or           : and_or_ns separator_op linebreak
+                 { $_[1]->{sep} = $_[2]; $_[1]->append($_[3]) }
+                 | and_or_ns newline_list
+                 { $_[1]->{sep} = ''; $_[1]->append($_[2]) }
                  ;
 and_or_ns        :                            pipeline
-                 { ShellParser::Token::AndOrList->new($_[1]) }
+                 { ShellParser::Token::AndOrList->new()->append($_[1]) }
                  | and_or_ns AND_IF linebreak pipeline
-                 { $_[1]->append($_[2], $_[4]); $_[1] }
+                 { $_[1]->append($_[2])->append($_[3])->append($_[4]) }
                  | and_or_ns OR_IF  linebreak pipeline
-                 { $_[1]->append($_[2], $_[4]); $_[1] }
+                 { $_[1]->append($_[2])->append($_[3])->append($_[4]) }
                  ;
 pipeline         :      pipe_sequence
                  | Bang pipe_sequence
@@ -143,11 +146,14 @@ wordlist         : wordlist WORD
                  { [$_[1]] }
                  ;
 case_clause      : Case WORD linebreak in linebreak case_list    Esac
-                 { ShellParser::Token::Case->new($_[2], $_[6]) }
+                 { ShellParser::Token::Case->new(
+                     ShellParser::Token::CommentedToken->new($_[2], $_[3]), $_[6]) }
                  | Case WORD linebreak in linebreak case_list_ns Esac
-                 { ShellParser::Token::Case->new($_[2], $_[6]) }
+                 { ShellParser::Token::Case->new(
+                     ShellParser::Token::CommentedToken->new($_[2], $_[3]), $_[6]) }
                  | Case WORD linebreak in linebreak              Esac
-                 { ShellParser::Token::Case->new($_[2], []) }
+                 { ShellParser::Token::Case->new(
+                     ShellParser::Token::CommentedToken->new($_[2], $_[3]), []) }
                  ;
 case_list_ns     : case_list case_item_ns
                  { push(@{$_[1]}, $_[2]); $_[1] }
@@ -159,12 +165,14 @@ case_list        : case_list case_item
                  |           case_item
                  { [$_[1]] }
                  ;
-case_item_ns     :     pattern ')'               linebreak
-                 { ShellParser::Token::CaseItem->new(undef, $_[1], undef, undef) }
+case_item_ns     :     pattern ')' linebreak
+                 { ShellParser::Token::CaseItem->new(undef, $_[1],
+                     ShellParser::Token::List->new($_[3]), undef) }
                  |     pattern ')' compound_list
                  { ShellParser::Token::CaseItem->new(undef, $_[1], $_[3], undef) }
-                 | '(' pattern ')'               linebreak
-                 { ShellParser::Token::CaseItem->new($_[1], $_[2], undef, undef) }
+                 | '(' pattern ')' linebreak
+                 { ShellParser::Token::CaseItem->new($_[1], $_[2],
+                     ShellParser::Token::List->new($_[4]), undef) }
                  | '(' pattern ')' compound_list
                  { ShellParser::Token::CaseItem->new($_[1], $_[2], $_[4], undef) }
                  ;
@@ -311,11 +319,6 @@ linebreak        : newline_list
                  ;
 separator_op     : '&'
                  | ';'
-                 ;
-separator        : separator_op linebreak
-                 { $_[1] }
-                 | newline_list
-                 { '' }
                  ;
 sequential_sep   : ';' linebreak
                  | newline_list
