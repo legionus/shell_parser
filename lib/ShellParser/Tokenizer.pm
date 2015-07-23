@@ -53,10 +53,10 @@ sub new {
     return bless($self, $class);
 }
 
-use ShellParser::Lexeme::QQString;
-use ShellParser::Lexeme::Word;
 use ShellParser::Lexeme::CommandSubstitution;
 use ShellParser::Lexeme::HereDoc;
+use ShellParser::Lexeme::QQString;
+use ShellParser::Lexeme::Word;
 
 sub _like_a_word {
     my ($self, $text) = @_;
@@ -248,7 +248,7 @@ sub _get_next_token {
     }
 
     if ($lexeme =~ /^#/) {
-        return ('COMMENT', $lexeme)
+        return ('COMMENT', $lexeme_obj);
     }
     if ($lexeme =~ /^\s*$/) {
         return ('BLANK', $lexeme)

@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use ShellParser::Lexeme;
+use ShellParser::Lexeme::Comment;
 use ShellParser::Lexeme::Escaped;
 use ShellParser::Lexeme::LineConcat;
 use ShellParser::Lexeme::QQString;
@@ -163,7 +164,7 @@ sub get_next_lexeme {
         if ($ignore_comments) {
             return ShellParser::Lexeme->new($1) if $$target =~ /\G (\#) /gcx;
         } else {
-            return ShellParser::Lexeme->new($1) if $$target =~ /\G (\#.*) /gcx;
+            return ShellParser::Lexeme::Comment->new($1) if $$target =~ /\G \#(.*) /gcx;
         }
 
         return ShellParser::Lexeme->new($1) if $$target =~ /\G (\n) /gcx;

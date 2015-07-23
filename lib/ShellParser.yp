@@ -6,6 +6,8 @@ use ShellParser::Token::Array;
 use ShellParser::Token::BraceGroup;
 use ShellParser::Token::Case;
 use ShellParser::Token::CaseItem;
+use ShellParser::Token::CommentedToken;
+use ShellParser::Token::Comments;
 use ShellParser::Token::CompoundCommand;
 use ShellParser::Token::DoGroup;
 use ShellParser::Token::For;
@@ -84,7 +86,7 @@ pipeline         :      pipe_sequence
 pipe_sequence    :                             command
                  { ShellParser::Token::Pipeline->new($_[1]) }
                  | pipe_sequence '|' linebreak command
-                 { $_[1]->append($_[4]); $_[1] }
+                 { $_[1]->append($_[3]); $_[1]->append($_[4]); $_[1] }
                  ;
 command          : simple_command
                  | compound_command
@@ -105,27 +107,31 @@ subshell         : '(' compound_list ')'
                  { ShellParser::Token::SubShell->new($_[2]) }
                  ;
 compound_list    : linebreak term_list
-                 { $_[2] }
+                 { $_[2]->prepend($_[1]) }
                  | linebreak term_list_ns
-                 { $_[2] }
+                 { $_[2]->prepend($_[1]) }
                  ;
 term_list_ns     : term_list and_or_ns
-                 { $_[1]->append($_[2]); $_[1] }
+                 { $_[1]->append($_[2]) }
                  |           and_or_ns
-                 { ShellParser::Token::List->new($_[1]) }
+                 { ShellParser::Token::List->new()->append($_[1]) }
                  ;
 term_list        : term_list and_or
-                 { $_[1]->append($_[2]); $_[1] }
+                 { $_[1]->append($_[2]) }
                  |           and_or
-                 { ShellParser::Token::List->new($_[1]) }
+                 { ShellParser::Token::List->new()->append($_[1]) }
                  ;
 for_clause       : For name                       sequential_sep do_group
                  # TODO: if sequential_sep == ';' then non_posix = 1
                  { ShellParser::Token::For->new($_[2], undef, $_[4]) }
                  | For name linebreak in          sequential_sep do_group
-                 { ShellParser::Token::For->new($_[2], [], $_[6]) }
+                 { ShellParser::Token::For->new(
+                     ShellParser::Token::CommentedToken->new($_[2], $_[3]),
+                     [], $_[6]) }
                  | For name linebreak in wordlist sequential_sep do_group
-                 { ShellParser::Token::For->new($_[2], $_[5], $_[7]) }
+                 { ShellParser::Token::For->new(
+                     ShellParser::Token::CommentedToken->new($_[2], $_[3]),
+                     $_[5], $_[7]) }
                  ;
 name             : WORD                     /* Apply rule 5 */
                  ;
@@ -291,12 +297,17 @@ filename         : WORD                      /* Apply rule 2 */
 io_here          : IO_HERE
                  ;
 newline_list     :                      NEWLINE
+                 { ShellParser::Token::Comments->new() }
                  |              COMMENT NEWLINE
+                 { ShellParser::Token::Comments->new()->append($_[1]) }
                  | newline_list         NEWLINE
+                 { $_[1] }
                  | newline_list COMMENT NEWLINE
+                 { $_[1]->append($_[2]) }
                  ;
 linebreak        : newline_list
                  | /* empty */
+                 { ShellParser::Token::Comments->new() }
                  ;
 separator_op     : '&'
                  | ';'
