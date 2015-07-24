@@ -53,14 +53,14 @@ sub new {
     return bless($self, $class);
 }
 
-use ShellParser::Lexeme::QQString;
-use ShellParser::Lexeme::Word;
 use ShellParser::Lexeme::CommandSubstitution;
 use ShellParser::Lexeme::HereDoc;
+use ShellParser::Lexeme::QQString;
+use ShellParser::Lexeme::Word;
 
 sub _like_a_word {
     my ($self, $text) = @_;
-    return $text =~ /^[^\s<>()|;&]/;
+    return $text =~ /^[^\s<>()|;&#]/;
 }
 
 sub _get_variable {
@@ -248,7 +248,7 @@ sub _get_next_token {
     }
 
     if ($lexeme =~ /^#/) {
-        return ('BLANK', $lexeme)
+        return ('COMMENT', $lexeme_obj);
     }
     if ($lexeme =~ /^\s*$/) {
         return ('BLANK', $lexeme)
@@ -275,7 +275,7 @@ sub _get_next_token {
                 $self->{lexer}->got_heredoc($r);
                 return ('IO_HERE', $r)
             }
-            return ($operators{$op}, $lexeme);
+            return ($operators{$op}, $lexeme_obj);
         }
     }
 

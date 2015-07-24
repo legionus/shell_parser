@@ -4,8 +4,10 @@ use strict;
 use warnings;
 
 use ShellParser::Lexeme;
+use ShellParser::Lexeme::Comment;
 use ShellParser::Lexeme::Escaped;
 use ShellParser::Lexeme::LineConcat;
+use ShellParser::Lexeme::Operator;
 use ShellParser::Lexeme::QQString;
 use ShellParser::Lexeme::QString;
 use ShellParser::Lexeme::Word;
@@ -163,14 +165,14 @@ sub get_next_lexeme {
         if ($ignore_comments) {
             return ShellParser::Lexeme->new($1) if $$target =~ /\G (\#) /gcx;
         } else {
-            return ShellParser::Lexeme->new($1) if $$target =~ /\G (\#.*) /gcx;
+            return ShellParser::Lexeme::Comment->new($1) if $$target =~ /\G \#(.*) /gcx;
         }
 
         return ShellParser::Lexeme->new($1) if $$target =~ /\G (\n) /gcx;
         return ShellParser::Lexeme->new($1) if $$target =~ /\G ([ \t]+) /gcx;
 
         foreach my $q (@operators) {
-            return ShellParser::Lexeme->new($1) if ($$target =~ /\G (\Q$q\E) /gcx);
+            return ShellParser::Lexeme::Operator->new($1) if ($$target =~ /\G (\Q$q\E) /gcx);
         }
 
         my $word_part = $self->_get_word_part();
