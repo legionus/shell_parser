@@ -6,10 +6,10 @@ use warnings;
 use base 'ShellParser::Token';
 
 sub new {
-    my ($class, $name, $words, $body) = @_;
+    my ($class, $name, $wordlist, $body) = @_;
     return bless({
         variable => $name,
-        words    => $words,
+        wordlist => $wordlist,
         body     => $body,
     }, $class);
 }
@@ -17,11 +17,7 @@ sub new {
 sub traverse {
     my ($self, $cb) = @_;
     $cb->($self->{variable}, "variable");
-    if ($self->{words}) {
-        foreach my $word (@{$self->{words}}) {
-            $cb->($word, "word");
-        }
-    }
+    $cb->($self->{wordlist}, "wordlist");
     $cb->($self->{body}, "body");
 }
 
