@@ -131,7 +131,9 @@ for_clause       : For name                       sequential_sep do_group
                  | For name linebreak in          sequential_sep do_group
                  { ShellParser::Token::For->new(
                      ShellParser::Token::CommentedToken->new($_[2], $_[3]),
-                     [], $_[6]) }
+                     ShellParser::Token::CommentedToken->new(
+                       ShellParser::Token::WordList->new(), $_[5]),
+                     $_[6]) }
                  | For name linebreak in wordlist sequential_sep do_group
                  { ShellParser::Token::For->new(
                      ShellParser::Token::CommentedToken->new($_[2], $_[3]),
