@@ -6,3 +6,4 @@ do #4
 done | #6
     sed -e 's/A/X/' && #7
     echo Y #8
+#9
