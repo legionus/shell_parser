@@ -9,7 +9,8 @@ all:
 
 test:
 	@! test -e .test.out || { echo 'Please, remove .test.out first' && exit 1; }
-	@find t/data -name '*.sh' | sort | while read -r f; \
+	@trap -- 'rm .test.out' EXIT; \
+	find t/data -name '*.sh' | sort | while read -r f; \
 	do \
 		printf "%s" "$$f"; \
 		if ./test_parser.pl "$$f" 1>.test.out; then \
@@ -25,12 +26,12 @@ test:
 		else \
 			echo ' failed to parse <----------'; \
 		fi; \
-		rm .test.out; \
 	done
 
 test-shfmt:
 	@! test -e .$@.out || { echo 'Please, remove .$@.out first' && exit 1; }
-	@find t/shfmt -name '*.sh' | sort | while read -r f; \
+	@trap -- 'rm .test.out' EXIT; \
+	find t/shfmt -name '*.sh' | sort | while read -r f; \
 	do \
 		printf "%s" "$$f"; \
 		if ./shfmt.pl "$$f" 1>.$@.out; then \
