@@ -180,16 +180,46 @@ sub dump_compoundcommand {
 	return $s;
 }
 
-sub _complex_condition {
+sub _complex_condition_simple {
 	my ($token) = @_;
 
-	my $num_childs = 0;
+	return 0 if !$token->{body} || ref($token->{body}) ne 'ARRAY';
 
+	my $num = 0;
 	foreach my $child (@{$token->{body}}) {
-		$num_childs++ if $child->{body} && @{$child->{body}} > 0;
+		$num++ if $child->{body} && @{$child->{body}} > 0;
+	}
+	return ($num > 1);
+}
+
+sub _complex_condition {
+	my ($token) = @_;
+	my $is_complex = 0;
+
+	my $check;
+	$check = sub {
+		my ($subtoken, $name) = @_;
+		my $subtype = ref($subtoken);
+
+		if ($subtype =~ /^.*::BraceGroup$/) {
+			$is_complex = 1;
+			return;
+		}
+		if ($subtype =~ /^.*::(SubShell|CommandSubstitution)$/) {
+			$is_complex = 1 if _complex_condition_simple($subtoken);
+			return;
+		}
+		$subtoken->traverse($check);
+	};
+	$token->traverse($check);
+
+	my $type = ref($token);
+
+	if ($type !~ /^.*::AndOrList$/) {
+		$is_complex = 1 if _complex_condition_simple($token);
 	}
 
-	return ($num_childs > 1);
+	return $is_complex;
 }
 
 sub dump_condition {
@@ -212,8 +242,9 @@ sub dump_if {
 		if ($body->{condition}) {
 			my $delim = " ";
 			my $suffix = ";";
+			my $complex = _complex_condition($body->{condition});
 
-			if (_complex_condition($body->{condition})) {
+			if ($complex) {
 				$delim = "\n";
 				$suffix = "";
 			}
@@ -221,7 +252,7 @@ sub dump_if {
 			my $condition = [];
 			push(@{$condition}, (!@{$childs} ? "if" : $indent . "elif"));
 			push(@{$condition}, dump_condition($context, $indent, $body->{condition}) . $suffix);
-			push(@{$condition}, "then");
+			push(@{$condition}, ($complex ? $indent : "") . "then");
 
 			push(@{$childs}, join($delim, @{$condition}));
 			push(@{$childs}, _purge_heredoc($context, $indent+0))
@@ -368,7 +399,7 @@ sub dump_funcdef {
 	$body .= " " . print_token($context, $indent+0, $_) foreach @{$token->{redirect}};
 
 	push(@{$childs}, print_token($context, $name_indent, $token->{name}) . '()');
-	push(@{$childs}, $body);
+	push(@{$childs}, $indent . $body);
 	return join("\n", @{$childs});
 }
 
