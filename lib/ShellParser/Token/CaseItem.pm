@@ -18,9 +18,7 @@ sub traverse {
     foreach my $elem (@{$self->{pattern}}) {
         $cb->($elem, "pattern");
     }
-    if ($self->{body}) {
-        $cb->($self->{body}, "body");
-    }
+    $cb->($self->{body}, "body");
 }
 
 1;

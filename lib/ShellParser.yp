@@ -6,6 +6,7 @@ use ShellParser::Token::Array;
 use ShellParser::Token::BraceGroup;
 use ShellParser::Token::Case;
 use ShellParser::Token::CaseItem;
+use ShellParser::Token::CaseItemList;
 use ShellParser::Token::CommentedToken;
 use ShellParser::Token::Comments;
 use ShellParser::Token::CompoundCommand;
@@ -150,41 +151,44 @@ wordlist         : wordlist WORD
                  ;
 case_clause      : Case WORD linebreak in linebreak case_list    Esac
                  { ShellParser::Token::Case->new(
-                     ShellParser::Token::CommentedToken->new($_[2], $_[3]), $_[6]) }
+                     ShellParser::Token::CommentedToken->new($_[2], $_[3]), $_[6]->prepend($_[5])) }
                  | Case WORD linebreak in linebreak case_list_ns Esac
                  { ShellParser::Token::Case->new(
-                     ShellParser::Token::CommentedToken->new($_[2], $_[3]), $_[6]) }
+                     ShellParser::Token::CommentedToken->new($_[2], $_[3]), $_[6]->prepend($_[5])) }
                  | Case WORD linebreak in linebreak              Esac
                  { ShellParser::Token::Case->new(
-                     ShellParser::Token::CommentedToken->new($_[2], $_[3]), []) }
+                     ShellParser::Token::CommentedToken->new($_[2], $_[3]),
+                     ShellParser::Token::CaseItemList->new()->append($_[5])) }
                  ;
 case_list_ns     : case_list case_item_ns
-                 { push(@{$_[1]}, $_[2]); $_[1] }
+                 { $_[1]->append($_[2]) }
                  |           case_item_ns
-                 { [$_[1]] }
+                 { ShellParser::Token::CaseItemList->new()->append($_[1]) }
                  ;
 case_list        : case_list case_item
-                 { push(@{$_[1]}, $_[2]); $_[1] }
+                 { $_[1]->append($_[2]) }
                  |           case_item
-                 { [$_[1]] }
+                 { ShellParser::Token::CaseItemList->new()->append($_[1]) }
                  ;
 case_item_ns     :     pattern ')' linebreak
                  { ShellParser::Token::CaseItem->new(undef, $_[1],
-                     ShellParser::Token::List->new($_[3]), undef) }
+                     ShellParser::Token::List->new()->append($_[3]), undef) }
                  |     pattern ')' compound_list
                  { ShellParser::Token::CaseItem->new(undef, $_[1], $_[3], undef) }
                  | '(' pattern ')' linebreak
                  { ShellParser::Token::CaseItem->new($_[1], $_[2],
-                     ShellParser::Token::List->new($_[4]), undef) }
+                     ShellParser::Token::List->new()->append($_[4]), undef) }
                  | '(' pattern ')' compound_list
                  { ShellParser::Token::CaseItem->new($_[1], $_[2], $_[4], undef) }
                  ;
 case_item        :     pattern ')' linebreak     DSEMI linebreak
-                 { ShellParser::Token::CaseItem->new(undef, $_[1], undef, $_[4]) }
+                 { ShellParser::Token::CaseItem->new(undef, $_[1],
+                     ShellParser::Token::List->new()->append($_[3]), $_[4]) }
                  |     pattern ')' compound_list DSEMI linebreak
                  { ShellParser::Token::CaseItem->new(undef, $_[1], $_[3], $_[4]) }
                  | '(' pattern ')' linebreak     DSEMI linebreak
-                 { ShellParser::Token::CaseItem->new($_[1], $_[2], undef, $_[5]) }
+                 { ShellParser::Token::CaseItem->new($_[1], $_[2],
+                     ShellParser::Token::List->new()->append($_[4]), $_[5]) }
                  | '(' pattern ')' compound_list DSEMI linebreak
                  { ShellParser::Token::CaseItem->new($_[1], $_[2], $_[4], $_[5]) }
                  ;

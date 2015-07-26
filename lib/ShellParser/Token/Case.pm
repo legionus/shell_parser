@@ -16,9 +16,7 @@ sub new {
 sub traverse {
     my ($self, $cb) = @_;
     $cb->($self->{word}, "word");
-    foreach my $elem (@{$self->{items}}) {
-        $cb->($elem, "item");
-    }
+    $cb->($self->{items}, "items");
 }
 
 1;
