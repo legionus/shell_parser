@@ -268,6 +268,23 @@ sub dump_if {
 	return join("\n", @{$childs});
 }
 
+sub dump_dogroup {
+	my ($context, $indent, $token) = @_;
+	my $childs = [];
+	push(@{$childs}, "do");
+
+	push(@{$childs}, _purge_heredoc($context, $indent+0))
+		if @{$context->{heredoc}};
+
+	foreach my $elem (@{$token->{body}}) {
+		next if $elem->{body} && ref($elem->{body}) eq "ARRAY" && !@{$elem->{body}};
+		push(@{$childs}, $indent . print_token($context, $indent+1, $elem));
+	}
+	push(@{$childs}, $indent . "done");
+
+	return join("\n", @{$childs});
+}
+
 sub dump_for {
 	my ($context, $indent, $token) = @_;
 	my $childs = [ "for" ];
@@ -288,7 +305,7 @@ sub dump_for {
 		$childs->[-1] .= ";";
 	}
 
-	push(@{$childs}, print_token($context, $indent+0, $token->{body}));
+	push(@{$childs}, dump_dogroup($context, $indent+0, $token->{body}));
 	return join(" ", @{$childs});
 }
 
@@ -305,7 +322,7 @@ sub dump_while {
 
 	my $childs = [ "while" ];
 	push(@{$childs}, dump_condition($context, $indent, $token->{condition}) . $suffix);
-	push(@{$childs}, print_token($context, $indent+0, $token->{body}));
+	push(@{$childs}, dump_dogroup($context, $indent+0, $token->{body}));
 	return join($delim, @{$childs});
 }
 
@@ -322,21 +339,8 @@ sub dump_until {
 
 	my $childs = [ "until" ];
 	push(@{$childs}, dump_condition($context, $indent, $token->{condition}) . $suffix);
-	push(@{$childs}, print_token($context, $indent+0, $token->{body}));
+	push(@{$childs}, dump_dogroup($context, $indent+0, $token->{body}));
 	return join($delim, @{$childs});
-}
-
-sub dump_dogroup {
-	my ($context, $indent, $token) = @_;
-	my $childs = [];
-	push(@{$childs}, "do");
-
-	push(@{$childs}, _purge_heredoc($context, $indent+0))
-		if @{$context->{heredoc}};
-
-	push(@{$childs}, print_token($context, $indent+1, $token->{body}));
-	push(@{$childs}, $indent . "done");
-	return join("\n", @{$childs});
 }
 
 sub dump_case {
@@ -485,7 +489,6 @@ my $dumper = {
 	CompoundCommand     => \&dump_compoundcommand,
 	If                  => \&dump_if,
 	For                 => \&dump_for,
-	DoGroup             => \&dump_dogroup,
 	FuncDef             => \&dump_funcdef,
 	BraceGroup          => \&dump_bracegroup,
 	Case                => \&dump_case,
