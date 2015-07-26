@@ -392,19 +392,50 @@ sub dump_heredoc {
 sub dump_subshell {
 	my ($context, $indent, $token) = @_;
 
-	my $subshell_indent = $indent->clone();
-	$subshell_indent->{depth} = 0;
+	my $childs = [ '(' ];
+	my $delim = "";
+	my $complex = _complex_condition($token->{body});
 
-	return '(' . print_token($context, $subshell_indent, $token->{body}) . ')';
+	my $subshell_indent = $indent->clone();
+	if (!$complex) {
+		$subshell_indent->{depth} = 0;
+		push(@{$childs}, print_token($context, $subshell_indent, $token->{body}));
+		push(@{$childs}, ')');
+	} else {
+		$delim = "\n";
+		$subshell_indent++;
+		push(@{$childs}, print_token($context, $subshell_indent, $token->{body}));
+		push(@{$childs}, $indent . ')');
+	}
+
+	return join($delim, @{$childs});
 }
 
 sub dump_commandsubstitution {
 	my ($context, $indent, $token) = @_;
 
-	my $subshell_indent = $indent->clone();
-	$subshell_indent->{depth} = 0;
+	my $childs = [];
+	my $delim = "";
+	my $complex = _complex_condition($token->{body});
 
-	return '"$(' . print_token($context, $subshell_indent, $token->{body}) . ')"';
+	my $subshell_indent = $indent->clone();
+
+	if ($complex) {
+		$delim = "\n";
+		$subshell_indent++;
+
+		push(@{$childs}, '"$(');
+		push(@{$childs}, print_token($context, $subshell_indent, $token->{body}));
+		push(@{$childs}, $indent . ')"');
+	} else {
+		$subshell_indent->{depth} = 0;
+
+		push(@{$childs}, '"$(');
+		push(@{$childs}, print_token($context, $subshell_indent, $token->{body}));
+		push(@{$childs}, ')"');
+	}
+
+	return join($delim, @{$childs});
 }
 
 my $dumper = {
