@@ -1,0 +1,1 @@
+x=${#svn_upstream[@]}

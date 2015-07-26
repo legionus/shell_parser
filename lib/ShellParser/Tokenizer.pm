@@ -191,7 +191,7 @@ sub _get_qq_string {
 sub _get_variable_part {
     my ($self, $head) = @_;
 
-    $head //= $self->{lexer}->get_next_lexeme();
+    $head //= $self->{lexer}->get_next_lexeme(1);
     return $head if !defined($head);
 
     if ($head->raw_string() eq '"') {
