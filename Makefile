@@ -30,7 +30,7 @@ test:
 
 test-shfmt:
 	@! test -e .$@.out || { echo 'Please, remove .$@.out first' && exit 1; }
-	@trap -- 'rm .test.out' EXIT; \
+	@trap -- 'rm -f $@.out' EXIT; \
 	find t/shfmt -name '*.sh' | sort | while read -r f; \
 	do \
 		printf "%s" "$$f"; \
