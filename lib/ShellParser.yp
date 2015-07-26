@@ -213,7 +213,9 @@ until_clause     : Until compound_list do_group
                  ;
 function_definition
                  : fname '(' ')' linebreak function_body
-                 { ShellParser::Token::FuncDef->new($_[1], $_[5]->{body}, $_[5]->{redirect}) }
+                 { ShellParser::Token::FuncDef->new(
+                     ShellParser::Token::CommentedToken->new($_[1], $_[4]),
+                     $_[5]->{body}, $_[5]->{redirect}) }
                  ;
 function_body    : compound_command                /* Apply rule 9 */
                  { {'body' => $_[1], 'redirect' => []} }
