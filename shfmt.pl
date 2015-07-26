@@ -37,10 +37,13 @@ sub dump_list {
 	my ($context, $indent, $token) = @_;
 	my $delim = "\n";
 
-	my $childs = [ map { print_token($context, $indent+0, $_) } @{$token->{body}} ];
-	my $s = join($delim, @{$childs});
+	my $childs = [];
+	foreach my $elem (@{$token->{body}}) {
+		next if $elem->{body} && ref($elem->{body}) eq "ARRAY" && !@{$elem->{body}};
+		push(@{$childs}, print_token($context, $indent+0, $elem));
+	}
 
-	return $s;
+	return join($delim, @{$childs});
 }
 
 sub dump_andorlist {
@@ -48,30 +51,34 @@ sub dump_andorlist {
 	my $delim = "\n";
 	my $child_indent = $indent->clone();
 
-	my $childs = [ $indent . print_token($context, $child_indent+0, $token->{first}) ];
+	my $childs = [];
+	foreach my $elem (@{$token->{body}}) {
+		next if $elem->{body} && ref($elem->{body}) eq "ARRAY" && !@{$elem->{body}};
 
-	if (@{$token->{rest}}) {
-		my $indent_string = "";
-		$indent_string .= $indent + 1 if !@{$context->{heredoc}};
-
-		foreach my $elem (@{$token->{rest}}) {
-			$childs->[-1] .= " " . ($elem->[0] // "");
-			push(@{$childs}, $indent_string . print_token($context, $child_indent+1, $elem->[1]));
+		my $type = ref($elem);
+		if ($type =~ /.*::Operator$/) {
+			$childs->[-1] .= " " . print_token($context, $child_indent+0, $elem);
+			next;
 		}
+
+		my $depth = 0;
+		$depth += 1 if @{$childs} && $type !~ /^.*::Comments$/;
+
+		my $indent_string = "";
+		$indent_string .= $indent + $depth
+			if !@{$context->{heredoc}} && $type !~ /^.*::Comments$/;
+
+		push(@{$childs}, $indent_string . print_token($context, $child_indent+$depth, $elem));
 	}
 
 	my $sep = "";
-	if ($token->{sep} ne "" && $token->{sep} ne "\n" && $token->{sep} ne ";") {
+	if ($token->{sep} ne "" && $token->{sep} ne ";") {
 		$sep = " " . $token->{sep};
-	}
-
-	if (@{$context->{heredoc}} > 0) {
-		$delim = " ";
 	}
 
 	my $s = join($delim, @{$childs}) . $sep;
 
-	if (!@{$token->{rest}}) {
+	if (@{$childs} > 0) {
 		my $heredoc_str = _purge_heredoc($context, $indent+0);
 		$s .= "\n$heredoc_str" if $heredoc_str;
 	}
@@ -84,7 +91,9 @@ sub dump_pipeline {
 	my $pipe_indent = $indent->clone();
 
 	my $childs = [];
-	foreach my $a (@{$token->{body}}) {
+	foreach my $elem (@{$token->{body}}) {
+		next if $elem->{body} && ref($elem->{body}) eq "ARRAY" && !@{$elem->{body}};
+
 		my $s = "";
 		$s .= " |" if @{$childs};
 
@@ -96,12 +105,39 @@ sub dump_pipeline {
 			$s .= " " if @{$childs};
 		}
 
-		$s .= print_token($context, $pipe_indent+0, $a);
+		$s .= print_token($context, $pipe_indent+0, $elem);
 
 		push(@{$childs}, $s);
 	}
 
 	return ($token->{banged} ? "! " : "") . join("", @{$childs});
+}
+
+sub dump_comments {
+	my ($context, $indent, $token) = @_;
+	my $delim = "\n";
+
+	my $childs = [];
+	foreach my $elem (@{$token->{body}}) {
+		next if $elem->{body} && ref($elem->{body}) eq "ARRAY" && !@{$elem->{body}};
+		push(@{$childs}, $indent . print_token($context, $indent+0, $elem));
+	}
+	my $s = join($delim, @{$childs});
+
+	return $s;
+}
+
+sub dump_commentedtoken {
+	my ($context, $indent, $token) = @_;
+
+	my $token_indent = $indent->clone();
+	$token_indent->{depth} = 0;
+
+	my $s = print_token($context, $token_indent, $token->{token});
+	$s .= " " . print_token($context, $token_indent, $token->{comments})
+		if $token->{comments} && @{$token->{comments}->{body}};
+
+	return $s;
 }
 
 sub dump_redirection {
@@ -146,7 +182,14 @@ sub dump_compoundcommand {
 
 sub _complex_condition {
 	my ($token) = @_;
-	return (@{$token->{body}} > 1);
+
+	my $num_childs = 0;
+
+	foreach my $child (@{$token->{body}}) {
+		$num_childs++ if $child->{body} && @{$child->{body}} > 0;
+	}
+
+	return ($num_childs > 1);
 }
 
 sub dump_condition {
@@ -370,6 +413,8 @@ my $dumper = {
 	QQString            => \&dump_lexeme,
 	LineConcat          => \&dump_lexeme,
 	Escaped             => \&dump_lexeme,
+	Comment             => \&dump_lexeme,
+	Operator            => \&dump_lexeme,
 	Word                => \&dump_word,
 	List                => \&dump_list,
 	AndOrList           => \&dump_andorlist,
@@ -389,6 +434,8 @@ my $dumper = {
 	HereDoc             => \&dump_heredoc,
 	SubShell            => \&dump_subshell,
 	CommandSubstitution => \&dump_commandsubstitution,
+	Comments            => \&dump_comments,
+	CommentedToken      => \&dump_commentedtoken,
 };
 
 sub print_token {
