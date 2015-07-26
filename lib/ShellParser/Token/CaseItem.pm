@@ -10,6 +10,7 @@ sub new {
     return bless({
     	pattern => $pattern,
         body => $body,
+        dsemi => $dsemi,
     }, $class);
 }
 
@@ -19,6 +20,9 @@ sub traverse {
         $cb->($elem, "pattern");
     }
     $cb->($self->{body}, "body");
+    if ($self->{dsemi}) {
+        $cb->($self->{dsemi}, "dsemi");
+    }
 }
 
 1;

@@ -183,14 +183,18 @@ case_item_ns     :     pattern ')' linebreak
                  ;
 case_item        :     pattern ')' linebreak     DSEMI linebreak
                  { ShellParser::Token::CaseItem->new(undef, $_[1],
-                     ShellParser::Token::List->new()->append($_[3]), $_[4]) }
+                     ShellParser::Token::List->new()->append($_[3]),
+                     ShellParser::Token::CommentedToken->new($_[4], $_[5])) }
                  |     pattern ')' compound_list DSEMI linebreak
-                 { ShellParser::Token::CaseItem->new(undef, $_[1], $_[3], $_[4]) }
+                 { ShellParser::Token::CaseItem->new(undef, $_[1], $_[3],
+                     ShellParser::Token::CommentedToken->new($_[4], $_[5])) }
                  | '(' pattern ')' linebreak     DSEMI linebreak
                  { ShellParser::Token::CaseItem->new($_[1], $_[2],
-                     ShellParser::Token::List->new()->append($_[4]), $_[5]) }
+                     ShellParser::Token::List->new()->append($_[4]),
+                     ShellParser::Token::CommentedToken->new($_[5], $_[6])) }
                  | '(' pattern ')' compound_list DSEMI linebreak
-                 { ShellParser::Token::CaseItem->new($_[1], $_[2], $_[4], $_[5]) }
+                 { ShellParser::Token::CaseItem->new($_[1], $_[2], $_[4],
+                     ShellParser::Token::CommentedToken->new($_[5], $_[6])) }
                  ;
 pattern          :             WORD         /* Apply rule 4 */
                  { [$_[1]] }
