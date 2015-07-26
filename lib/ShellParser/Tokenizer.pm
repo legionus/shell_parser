@@ -63,22 +63,28 @@ sub _like_a_word {
     return $text =~ /^[^\s<>()|;&#]/;
 }
 
+sub _get_complex_variable {
+    my ($self) = @_;
+
+    my $content = "";
+    while (1) {
+        my $token = $self->_get_variable_part();
+        if (!defined($token)) {
+            die "Expected '}', got EOF";
+        }
+        $content .= $token->raw_string();
+        last if $token->raw_string() eq '}';
+    }
+    return ShellParser::Lexeme->new("\${" . $content);
+}
+
 sub _get_variable {
     my ($self, $head) = @_;
 
     my $name = $self->{lexer}->get_variable_name();
 
     if ($name eq '{') {
-        my $content = "";
-        while (1) {
-            my $token = $self->_get_word_part();
-            if (!defined($token)) {
-                die "Expected '}', got EOF";
-            }
-            $content .= $token->raw_string();
-            last if $token->raw_string() eq '}';
-        }
-        return ShellParser::Lexeme->new($head->raw_string() . $name . $content);
+        return $self->_get_complex_variable();
     }
 
     if ($name eq '((') {
@@ -142,12 +148,72 @@ sub _get_qq_string_part {
     $head //= $self->{lexer}->get_next_lexeme(1);
     return $head if !defined($head);
 
+    if ($head->raw_string() eq '`') {
+        return $self->_get_backquoted($head);
+    }
+
     if ($head->raw_string() eq '$') {
         return $self->_get_variable($head);
     }
 
+    return $head;
+}
+
+sub _get_qq_string {
+    my ($self, $head) = @_;
+
+    my @qq_value_parts = ();
+    my $str = "";
+    while (1) {
+        my $lexeme_obj = $self->_get_qq_string_part();
+        if (!defined($lexeme_obj)) {
+            die "Expected '\"', got EOF";
+        }
+        last if $lexeme_obj->raw_string() eq '"';
+        if (
+            $lexeme_obj->isa("ShellParser::Lexeme::LineConcat") ||
+            $lexeme_obj->isa("ShellParser::Lexeme::Escaped") ||
+            $lexeme_obj->isa("ShellParser::Lexeme::CommandSubstitution") ||
+            $lexeme_obj->as_string() =~ /^\$/
+        ) {
+            push(@qq_value_parts, ShellParser::Lexeme->new($str)) if $str;
+            $str = "";
+            push(@qq_value_parts, $lexeme_obj);
+        } else {
+            # TODO(dmage): ugly hack to minimize tree size
+            $str .= $lexeme_obj->raw_string();
+        }
+    }
+    push(@qq_value_parts, ShellParser::Lexeme->new($str)) if $str;
+    return ShellParser::Lexeme::QQString->new(\@qq_value_parts);
+}
+
+sub _get_variable_part {
+    my ($self, $head) = @_;
+
+    $head //= $self->{lexer}->get_next_lexeme();
+    return $head if !defined($head);
+
+    if ($head->raw_string() eq '"') {
+        return $self->_get_qq_string($head);
+    }
+
+    if ($head->raw_string() eq "'") {
+        return $self->{lexer}->get_q_string();
+    }
+
     if ($head->raw_string() eq '`') {
         return $self->_get_backquoted($head);
+    }
+
+    if ($head->raw_string() eq '$') {
+        my $name = $self->{lexer}->get_variable_name();
+
+        if ($name eq '{') {
+            return $self->_get_complex_variable();
+        }
+
+        return ShellParser::Lexeme->new($head->raw_string() . $name);
     }
 
     return $head;
@@ -160,42 +226,19 @@ sub _get_word_part {
     return $head if !defined($head);
 
     if ($head->raw_string() eq '"') {
-        my @qq_value_parts = ();
-        my $str = "";
-        while (1) {
-            my $lexeme_obj = $self->_get_qq_string_part();
-            if (!defined($lexeme_obj)) {
-                die "Expected '\"', got EOF";
-            }
-            last if $lexeme_obj->raw_string() eq '"';
-            if (
-                $lexeme_obj->isa("ShellParser::Lexeme::LineConcat") ||
-                $lexeme_obj->isa("ShellParser::Lexeme::Escaped") ||
-                $lexeme_obj->isa("ShellParser::Lexeme::CommandSubstitution") ||
-                $lexeme_obj->as_string() =~ /^\$/
-            ) {
-                push(@qq_value_parts, ShellParser::Lexeme->new($str)) if $str;
-                $str = "";
-                push(@qq_value_parts, $lexeme_obj);
-            } else {
-                # TODO(dmage): ugly hack to minimize tree size
-                $str .= $lexeme_obj->raw_string();
-            }
-        }
-        push(@qq_value_parts, ShellParser::Lexeme->new($str)) if $str;
-        return ShellParser::Lexeme::QQString->new(\@qq_value_parts);
+        return $self->_get_qq_string($head);
     }
 
     if ($head->raw_string() eq "'") {
         return $self->{lexer}->get_q_string();
     }
 
-    if ($head->raw_string() eq '$') {
-        return $self->_get_variable($head);
-    }
-
     if ($head->raw_string() eq '`') {
         return $self->_get_backquoted($head);
+    }
+
+    if ($head->raw_string() eq '$') {
+        return $self->_get_variable($head);
     }
 
     return $head;
