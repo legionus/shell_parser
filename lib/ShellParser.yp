@@ -125,7 +125,9 @@ term_list        : term_list and_or
                  |           and_or
                  { ShellParser::Token::List->new()->append($_[1]) }
                  ;
-for_clause       : For name                       sequential_sep do_group
+for_clause       : For name                                      do_group
+                 { ShellParser::Token::For->new($_[2], undef, $_[4]) }
+                 | For name                       sequential_sep do_group
                  # TODO: if sequential_sep == ';' then non_posix = 1
                  { ShellParser::Token::For->new($_[2], undef, $_[4]) }
                  | For name linebreak in          sequential_sep do_group

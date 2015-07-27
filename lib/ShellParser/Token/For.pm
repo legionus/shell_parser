@@ -17,7 +17,9 @@ sub new {
 sub traverse {
     my ($self, $cb) = @_;
     $cb->($self->{variable}, "variable");
-    $cb->($self->{wordlist}, "wordlist");
+    if ($self->{wordlist}) {
+        $cb->($self->{wordlist}, "wordlist");
+    }
     $cb->($self->{body}, "body");
 }
 
