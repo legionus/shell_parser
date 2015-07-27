@@ -20,6 +20,13 @@ sub dump_word {
 	return join('', @{$childs});
 }
 
+sub dump_wordlist {
+	my ($context, $indent, $token) = @_;
+
+	my $childs = [ map { print_token($context, $indent+0, $_) } @{$token->{body}} ];
+	return join(' ', @{$childs});
+}
+
 sub _purge_heredoc {
 	my ($context, $indent) = @_;
 
@@ -297,10 +304,9 @@ sub dump_for {
 	my $words_indent = $indent->clone();
 	$words_indent->{depth} = 0;
 
-	my $words = [ map { print_token($context, $words_indent, $_) } @{$token->{words}} ];
-	if (@{$words}) {
-		push(@{$childs}, "in");
-		push(@{$childs}, join(" ", @{$words}) . ";");
+	my $words = print_token($context, $words_indent, $token->{wordlist});
+	if ($words) {
+		push(@{$childs}, "in " . $words . ";");
 	} else {
 		$childs->[-1] .= ";";
 	}
@@ -351,10 +357,23 @@ sub dump_case {
 	$var_indent->{depth} = 0;
 
 	push(@{$childs}, "case " . print_token($context, $var_indent, $token->{word}) . " in");
-	foreach my $item (@{$token->{items}}) {
-		push(@{$childs}, print_token($context, $indent+1, $item));
-	}
+	push(@{$childs}, print_token($context, $indent+1, $token->{items}));
 	push(@{$childs}, $indent . "esac");
+
+	return join("\n", @{$childs});
+}
+
+sub dump_caseitemlist {
+	my ($context, $indent, $token) = @_;
+	my $childs = [];
+
+#	my $items_indent = $indent->clone();
+#	$items_indent->{depth} = 0;
+
+	foreach my $elem (@{$token->{body}}) {
+		next if $elem->{body} && ref($elem->{body}) eq "ARRAY" && !@{$elem->{body}};
+		push(@{$childs}, $indent . print_token($context, $indent+0, $elem));
+	}
 
 	return join("\n", @{$childs});
 }
@@ -373,12 +392,13 @@ sub dump_caseitem {
 		push(@{$patterns}, print_token($context, $pattern_indent, $pattern));
 	}
 
-	push(@{$childs}, $indent . "(" .  join("", @{$patterns}) . ")");
+	push(@{$childs}, "(" .  join("", @{$patterns}) . ")");
 
 	push(@{$childs}, print_token($context, $indent+1, $token->{body}))
 		if $token->{body};
 
-	push(@{$childs}, ($indent+1) . ";;");
+	my $dsemi = $token->{dsemi} ? print_token($context, $indent+0, $token->{dsemi}) : ";;";
+	push(@{$childs}, ($indent+1) . $dsemi);
 
 	return join("\n", @{$childs});
 }
@@ -482,6 +502,7 @@ my $dumper = {
 	Comment             => \&dump_lexeme,
 	Operator            => \&dump_lexeme,
 	Word                => \&dump_word,
+	WordList            => \&dump_wordlist,
 	List                => \&dump_list,
 	AndOrList           => \&dump_andorlist,
 	Pipeline            => \&dump_pipeline,
@@ -493,6 +514,7 @@ my $dumper = {
 	BraceGroup          => \&dump_bracegroup,
 	Case                => \&dump_case,
 	CaseItem            => \&dump_caseitem,
+	CaseItemList        => \&dump_caseitemlist,
 	Redirection         => \&dump_redirection,
 	While               => \&dump_while,
 	Until               => \&dump_until,
