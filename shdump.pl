@@ -110,9 +110,16 @@ sub dump_andorlist {
 
 	foreach my $elem (@{$token->{body}}) {
 		if ($elem->isa("ShellParser::Lexeme::Operator")) {
-			$writer->print(ShellParser::Lexeme->new(" "));
-			$writer->print($elem);
-			$writer->print(ShellParser::Lexeme->new(" "));
+			if ($compactness >= 2) {
+				$writer->print(ShellParser::Lexeme->new(" "));
+				$writer->print($elem);
+				$writer->print(ShellParser::Lexeme->new(" "));
+			} else {
+				$writer->print(ShellParser::Lexeme->new(" "));
+				$writer->print($elem);
+				$writer->print(ShellParser::Lexeme::NewLine->new());
+				$writer->print(ShellParser::Lexeme->new($prefix+1));
+			}
 		} else {
 			if (ref($elem) eq "ShellParser::Token::Comments") {
 				if (@{$elem->{body}} == 1) {
