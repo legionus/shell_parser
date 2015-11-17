@@ -248,6 +248,9 @@ sub dump_while {
 	my $err = dump_token($writer, $compactness, $prefix+1, $token->{body});
 	return $err if defined($err);
 
+	if ($compactness < 2) {
+		$writer->print(ShellParser::Lexeme->new($prefix));
+	}
 	$writer->print(ShellParser::Lexeme->new("done"));
 	return $writer->err();
 }
