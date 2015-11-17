@@ -1,9 +1,6 @@
-while
-	cat <<EOF1
+while cat <<EOF1; false; do
 foo
 EOF1
-	false
-do
 	echo OK
 done
 while read var; do

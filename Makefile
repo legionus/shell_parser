@@ -34,7 +34,7 @@ test-shfmt:
 	find t/shfmt -name '*.sh' | sort | while read -r f; \
 	do \
 		printf "%s" "$$f"; \
-		if ./shfmt.pl "$$f" 1>.$@.out; then \
+		if ./shdump.pl "$$f" 1>.$@.out; then \
 			if cmp -s "$${f%.sh}.out" .$@.out; then \
 				echo ' ok'; \
 			else \

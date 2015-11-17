@@ -14,6 +14,7 @@ sub new {
 	my ($class) = @_;
 	my $self = {
 		separator => "\t",
+#		separator => "⇢\t",
 		depth     => 0,
 		condition => 0,
 	};

@@ -1,5 +1,4 @@
-_w()
-{
+_w() {
 	# Write the argument parameter to a file, if it exists.
 	local path=$1 mode=$2 uid=$3 gid=$4 age=$5 arg=$6
 	if [ -f "$path" ]; then

@@ -1,9 +1,7 @@
-cat <<EOF1 |
+cat <<EOF1 | cat <<EOF2 | cat <<EOF3
 aaa
 EOF1
-cat <<EOF2 |
 bbb
 EOF2
-cat <<EOF3
 ccc
 EOF3

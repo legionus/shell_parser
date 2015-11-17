@@ -1,16 +1,12 @@
-xxx1()
-{
+xxx1() {
 	ls -l -a
 }
-xxx2()
-{
+xxx2() {
 	echo OK
 } >&2
-xxx3()
-{
+xxx3() {
 	echo ${foo:-'}'}
 }
-xxx4()
-{
+xxx4() {
 	echo ${foo:-"}"}
 }
