@@ -1,5 +1,4 @@
-! fatal()
-{
+! fatal() {
 	echo "fatal: $@" ||
 		kill -6 $$
 	exit ||

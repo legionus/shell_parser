@@ -162,6 +162,7 @@ sub dump_pipeline {
 		my $wanna_pipe = 0;
 		for (my $j = $i + 1; $j <= $#{$token->{body}}; $j++) {
 			if (ref($token->{body}->[$j]) eq "ShellParser::Token::SimpleCommand" ||
+				ref($token->{body}->[$j]) eq "ShellParser::Token::CompoundCommand" ||
 				ref($token->{body}->[$i]) eq "ShellParser::Token::CompoundCommand") {
 				$wanna_pipe = 1;
 				last;
@@ -277,7 +278,16 @@ sub dump_for {
 
 	my $semicolon = 1;
 	if (defined($token->{wordlist})) {
-		$writer->print(ShellParser::Lexeme->new(" in "));
+		my $have_comment = 0;
+
+		if (ref($token->{variable}) eq "ShellParser::Token::CommentedToken") {
+			if (@{$token->{variable}->{comments}->{body}} > 0) {
+				$have_comment = 1;
+			}
+		}
+
+		$writer->print(ShellParser::Lexeme->new($have_comment ? $prefix+1 : " "));
+		$writer->print(ShellParser::Lexeme->new("in "));
 
 		$err = dump_token($writer, $compactness, $prefix+1, $token->{wordlist});
 		return $err if defined($err);
@@ -552,7 +562,6 @@ sub dump_subshell {
 
 			$writer->print(ShellParser::Lexeme::NewLine->new());
 			$buf->copy_to($writer);
-			$writer->print(ShellParser::Lexeme::NewLine->new());
 		}
 
 	$writer->print(ShellParser::Lexeme->new($prefix)) if $compactness == 1;
