@@ -287,7 +287,7 @@ sub _get_next_token {
         if ($self->{state} != STATE_CASE_WAIT_PATTERN) {
             $self->{state} = STATE_NORMAL;
         }
-        return ('NEWLINE', $lexeme);
+        return ('NEWLINE', $lexeme_obj);
     }
 
     if ($lexeme =~ /^#/) {

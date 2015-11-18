@@ -61,7 +61,7 @@ sub dump_comments {
 	my ($writer, $compactness, $prefix, $token) = @_;
 
 	if (@{$token->{body}} > 1) {
-		$writer->print(ShellParser::Lexeme::NewLine->new());
+		$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 		$writer->print(ShellParser::Lexeme->new($prefix));
 	}
 
@@ -70,7 +70,7 @@ sub dump_comments {
 			$writer->print(ShellParser::Lexeme->new($prefix));
 		}
 		$writer->print($token->{body}->[$i]);
-		$writer->print(ShellParser::Lexeme::NewLine->new());
+		$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 	}
 	return $writer->err();
 }
@@ -88,7 +88,7 @@ sub dump_commentedtoken {
 		return $err if defined($err);
 	}
 
-	#$writer->print(ShellParser::Lexeme::NewLine->new())
+	#$writer->print(ShellParser::Lexeme::NewLine->new("\n"))
 	return $writer->err();
 }
 
@@ -117,7 +117,7 @@ sub dump_andorlist {
 			} else {
 				$writer->print(ShellParser::Lexeme->new(" "));
 				$writer->print($elem);
-				$writer->print(ShellParser::Lexeme::NewLine->new());
+				$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 				$writer->print(ShellParser::Lexeme->new($prefix+1));
 			}
 		} else {
@@ -144,7 +144,7 @@ sub dump_andorlist {
 		$writer->print(ShellParser::Lexeme->new(";"))
 			if !$token->{sep};
 	} else {
-		$writer->print(ShellParser::Lexeme::NewLine->new());
+		$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 	}
 	return $writer->err();
 }
@@ -223,17 +223,17 @@ sub dump_while {
 			$buf->copy_to($writer);
 
 			$writer->print(ShellParser::Lexeme->new(" do"));
-			$writer->print(ShellParser::Lexeme::NewLine->new());
+			$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 		} else {
 			$buf = ShellParser::LexemeBuffer->new();
 
 			$err = dump_token($buf, $compactness, $prefix+1, $token->{condition});
 			return $err if defined($err);
 
-			$writer->print(ShellParser::Lexeme::NewLine->new());
+			$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 			$buf->copy_to($writer);
 			$writer->print(ShellParser::Lexeme->new("do"));
-			$writer->print(ShellParser::Lexeme::NewLine->new());
+			$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 		}
 	} else {
 		$buf = ShellParser::LexemeBuffer->new();
@@ -243,7 +243,7 @@ sub dump_while {
 		$writer->print(ShellParser::Lexeme->new(" "));
 		$buf->copy_to($writer);
 		$writer->print(ShellParser::Lexeme->new(" do"));
-		$writer->print(ShellParser::Lexeme::NewLine->new());
+		$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 	}
 
 	my $err = dump_token($writer, $compactness, $prefix+1, $token->{body});
@@ -302,7 +302,7 @@ sub dump_for {
 	}
 
 	$writer->print(ShellParser::Lexeme->new("do"));
-	$writer->print(ShellParser::Lexeme::NewLine->new());
+	$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 
 	$err = dump_token($writer, $compactness, $prefix+1, $token->{body});
 	return $err if defined($err);
@@ -360,17 +360,17 @@ sub dump_ifcondition {
 			$buf->copy_to($writer);
 
 			$writer->print(ShellParser::Lexeme->new(" then"));
-			$writer->print(ShellParser::Lexeme::NewLine->new());
+			$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 		} else {
 			$buf = ShellParser::LexemeBuffer->new();
 
 			$err = dump_token($buf, $compactness, $prefix+1, $token);
 			return $err if defined($err);
 
-			$writer->print(ShellParser::Lexeme::NewLine->new());
+			$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 			$buf->copy_to($writer);
 			$writer->print(ShellParser::Lexeme->new("then"));
-			$writer->print(ShellParser::Lexeme::NewLine->new());
+			$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 		}
 	} else {
 		$buf = ShellParser::LexemeBuffer->new();
@@ -380,7 +380,7 @@ sub dump_ifcondition {
 		$writer->print(ShellParser::Lexeme->new(" "));
 		$buf->copy_to($writer);
 		$writer->print(ShellParser::Lexeme->new(" then"));
-		$writer->print(ShellParser::Lexeme::NewLine->new());
+		$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 	}
 
 	return;
@@ -399,7 +399,7 @@ sub dump_if {
 		} else {
 			$writer->print(ShellParser::Lexeme->new($prefix));
 			$writer->print(ShellParser::Lexeme->new("else"));
-			$writer->print(ShellParser::Lexeme::NewLine->new());
+			$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 		}
 
 		$err = dump_token($writer, $compactness, $prefix+1, $subtoken->{body});
@@ -443,7 +443,7 @@ sub dump_bracegroup {
 	$writer->print(ShellParser::Lexeme->new("{"));
 	$writer->print(
 		$compactness < 2
-			? ShellParser::Lexeme::NewLine->new()
+			? ShellParser::Lexeme::NewLine->new("\n")
 			: ShellParser::Lexeme->new(" ")
 	);
 
@@ -484,7 +484,7 @@ sub dump_caseitem {
 	}
 
 	$writer->print(ShellParser::Lexeme->new(")"));
-	$writer->print(ShellParser::Lexeme::NewLine->new());
+	$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 
 	$err = dump_token($writer, $compactness, $prefix+1, $token->{body});
 	return $err if defined($err);
@@ -494,7 +494,7 @@ sub dump_caseitem {
 		$err = dump_token($writer, $compactness, $prefix+1, $token->{dsemi});
 		return $err if defined($err);
 
-		$writer->print(ShellParser::Lexeme::NewLine->new());
+		$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 	}
 
 	return $writer->err();
@@ -510,7 +510,7 @@ sub dump_case {
 	return $err if defined($err);
 
 	$writer->print(ShellParser::Lexeme->new(" in"));
-	$writer->print(ShellParser::Lexeme::NewLine->new());
+	$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 
 	$err = dump_token($writer, $compactness, $prefix+1, $token->{items});
 	return $err if defined($err);
@@ -560,7 +560,7 @@ sub dump_subshell {
 			$err = dump_token($buf, $compactness, $prefix+1, $token->{body});
 			return $err if defined($err);
 
-			$writer->print(ShellParser::Lexeme::NewLine->new());
+			$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 			$buf->copy_to($writer);
 		}
 
