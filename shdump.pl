@@ -14,6 +14,37 @@ use ShellParser::Indent;
 
 #use Carp qw(cluck);
 
+my $features = {
+	ignore_empty_lines => 1,
+};
+
+sub count_comments {
+	my ($token) = @_;
+	my $num = 0;
+	foreach my $i (0..$#{$token->{body}}) {
+		if (ref($token->{body}->[$i]) eq "ShellParser::Lexeme::Comment") {
+			$num++;
+		}
+	}
+	return $num;
+}
+
+sub is_inline_comment {
+	my ($token) = @_;
+	if (@{$token->{body}} > 0 && ref($token->{body}->[0]) eq "ShellParser::Lexeme::Comment") {
+		return 1;
+	}
+	return 0;
+}
+
+sub is_newline_comment {
+	my ($token) = @_;
+	if (@{$token->{body}} == 1 && ref($token->{body}->[0]) eq "ShellParser::Lexeme::NewLine") {
+		return 1;
+	}
+	return 0;
+}
+
 sub dump_lexeme {
 	my ($writer, $compactness, $prefix, $token) = @_;
 
@@ -25,7 +56,6 @@ sub dump_word {
 	my ($writer, $compactness, $prefix, $token) = @_;
 
 	foreach my $i (0..$#{$token->{value}}) {
-		#print "XXX: " . ref($token->{value}->[$i]) . "\n";
 		my $err = dump_token($writer, $compactness, $prefix, $token->{value}->[$i]);
 		return $err if defined($err);
 	}
@@ -38,9 +68,9 @@ sub dump_list {
 
 	foreach my $i (0..$#{$token->{body}}) {
 		if (ref($token->{body}->[$i]) eq "ShellParser::Token::Comments") {
-			if (@{$token->{body}->[$i]->{body}} > 0 && $compactness == 1) {
-				$writer->print(ShellParser::Lexeme->new($prefix));
-			}
+#			if (count_comments($token->{body}->[$i]) > 0 && $compactness == 1) {
+#				$writer->print(ShellParser::Lexeme->new($prefix));
+#			}
 		} elsif (ref($token->{body}->[$i]) eq "ShellParser::Token::AndOrList") {
 			if ($compactness == 1) {
 				$writer->print(ShellParser::Lexeme->new($prefix));
@@ -60,17 +90,20 @@ sub dump_list {
 sub dump_comments {
 	my ($writer, $compactness, $prefix, $token) = @_;
 
-	if (@{$token->{body}} > 1) {
-		$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
-		$writer->print(ShellParser::Lexeme->new($prefix));
-	}
-
+	my $newline = 0;
 	foreach my $i (0..$#{$token->{body}}) {
-		if ($compactness == 1 && $i > 0) {
-			$writer->print(ShellParser::Lexeme->new($prefix));
+		if (ref($token->{body}->[$i]) eq "ShellParser::Lexeme::NewLine") {
+			if ($features->{ignore_empty_lines} && $newline) {
+				next;
+			}
+			$newline = 1;
+		} else {
+			if ($compactness == 1 && $i > 0) {
+				$writer->print(ShellParser::Lexeme->new($prefix));
+			}
+			$newline = 0;
 		}
 		$writer->print($token->{body}->[$i]);
-		$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
 	}
 	return $writer->err();
 }
@@ -82,13 +115,14 @@ sub dump_commentedtoken {
 	$err = dump_token($writer, $compactness, $prefix, $token->{token});
 	return $err if defined($err);
 
-	if (@{$token->{comments}->{body}} > 0) {
-		$writer->print(ShellParser::Lexeme->new(" "));
+	if (count_comments($token->{comments}) > 0) {
+		if (is_inline_comment($token->{comments})) {
+			$writer->print(ShellParser::Lexeme->new(" "));
+		}
+
 		$err = dump_token($writer, $compactness, $prefix, $token->{comments});
 		return $err if defined($err);
 	}
-
-	#$writer->print(ShellParser::Lexeme::NewLine->new("\n"))
 	return $writer->err();
 }
 
@@ -107,26 +141,28 @@ sub dump_redirection {
 
 sub dump_andorlist {
 	my ($writer, $compactness, $prefix, $token) = @_;
+	my $operator = 0;
 
 	foreach my $elem (@{$token->{body}}) {
 		if ($elem->isa("ShellParser::Lexeme::Operator")) {
-			if ($compactness >= 2) {
-				$writer->print(ShellParser::Lexeme->new(" "));
-				$writer->print($elem);
-				$writer->print(ShellParser::Lexeme->new(" "));
-			} else {
-				$writer->print(ShellParser::Lexeme->new(" "));
-				$writer->print($elem);
+			$writer->print(ShellParser::Lexeme->new(" "));
+			$writer->print($elem);
+#			$writer->print(ShellParser::Lexeme->new(" "));
+			if ($operator) {
 				$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
-				$writer->print(ShellParser::Lexeme->new($prefix+1));
 			}
+			$operator = 1;
 		} else {
 			if (ref($elem) eq "ShellParser::Token::Comments") {
-				if (@{$elem->{body}} == 1) {
+				if (is_inline_comment($elem)) {
 					$writer->print(ShellParser::Lexeme->new(" "));
 				}
+			} else {
+				if ($operator) {
+					$writer->print(ShellParser::Lexeme->new($prefix+1));
+				}
 			}
-			my $err = dump_token($writer, $compactness, $prefix, $elem);
+			my $err = dump_token($writer, $compactness, $prefix+$operator, $elem);
 			return $err if defined($err);
 		}
 	}
@@ -176,7 +212,7 @@ sub dump_pipeline {
 				$writer->print(ShellParser::Lexeme->new(" | "));
 			}
 		} elsif (ref($token->{body}->[$i]) eq "ShellParser::Token::Comments") {
-			if (@{$token->{body}->[$i]->{body}} > 0 && $wanna_pipe) {
+			if (count_comments($token) > 0 && $wanna_pipe) {
 				$writer->print(ShellParser::Lexeme->new($prefix+1));
 			}
 		} else {
@@ -281,7 +317,7 @@ sub dump_for {
 		my $have_comment = 0;
 
 		if (ref($token->{variable}) eq "ShellParser::Token::CommentedToken") {
-			if (@{$token->{variable}->{comments}->{body}} > 0) {
+			if (count_comments($token->{variable}->{comments}) > 0) {
 				$have_comment = 1;
 			}
 		}
@@ -292,7 +328,7 @@ sub dump_for {
 		$err = dump_token($writer, $compactness, $prefix+1, $token->{wordlist});
 		return $err if defined($err);
 
-		$semicolon = 0 if @{$token->{wordlist}->{comments}->{body}} > 0;
+		$semicolon = 0 if count_comments($token->{wordlist}->{comments}) > 0;
 	}
 
 	if ($semicolon) {
@@ -302,7 +338,10 @@ sub dump_for {
 	}
 
 	$writer->print(ShellParser::Lexeme->new("do"));
-	$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
+	if (count_comments($token->{body}->{body}->[0]) > 0) {
+		$writer->print(ShellParser::Lexeme->new(" "));
+#		$writer->print(ShellParser::Lexeme::NewLine->new("\n"));
+	}
 
 	$err = dump_token($writer, $compactness, $prefix+1, $token->{body});
 	return $err if defined($err);
@@ -440,12 +479,20 @@ sub dump_function {
 
 sub dump_bracegroup {
 	my ($writer, $compactness, $prefix, $token) = @_;
+
+	if (ref($token->{body}) ne "ShellParser::Token::List") {
+		return ShellParser::Error->new("unexpected token $token->{body}");
+	}
+
 	$writer->print(ShellParser::Lexeme->new("{"));
-	$writer->print(
-		$compactness < 2
-			? ShellParser::Lexeme::NewLine->new("\n")
-			: ShellParser::Lexeme->new(" ")
-	);
+
+	if (is_inline_comment($token->{body}->{body}->[0])) {
+		$writer->print(
+			$compactness < 2
+				? ShellParser::Lexeme::NewLine->new("\n")
+				: ShellParser::Lexeme->new(" ")
+		);
+	}
 
 	my $err = dump_token($writer, $compactness, $prefix+1, $token->{body});
 	return $err if defined($err);
